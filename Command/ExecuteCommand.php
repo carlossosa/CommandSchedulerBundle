@@ -3,12 +3,14 @@
 namespace JMose\CommandSchedulerBundle\Command;
 
 use Cron\CronExpression;
+use DateTimeInterface;
 use Doctrine\Common\Persistence\Mapping\MappingException;
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\DBAL\ConnectionException;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\ORMException;
+use JMose\CommandSchedulerBundle\Service\SchedulerService;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Input\InputInterface;
@@ -64,12 +66,12 @@ class ExecuteCommand extends Command
     public function __construct(ManagerRegistry $managerRegistry, $managerName, $logPath)
     {
         $this->managerName = $managerName;
-        $this->registry = $managerRegistry->getManager($managerName);
+        $this->registry = $managerRegistry;
         $this->logPath = $logPath;
 
         // If logpath is not set to false, append the directory separator to it
         if (false !== $this->logPath) {
-            $this->logPath = rtrim($this->logPath, '/\\').DIRECTORY_SEPARATOR;
+            $this->logPath = rtrim($this->logPath, '/\\') . DIRECTORY_SEPARATOR;
         }
         parent::__construct();
     }
@@ -163,7 +165,13 @@ class ExecuteCommand extends Command
                 if (!$input->getOption('dump')) {
                     $this->executeCommand($command, $output, $input);
                 }
-            } elseif ($command->getExecutionMode() == ScheduledCommand::MODE_AUTO && $nextRunDate < $now) {
+            } elseif (
+                ($command->getExecutionMode() == ScheduledCommand::MODE_AUTO && $nextRunDate < $now) &&
+                (!$command->getDelayExecution() || ($command->getDelayExecution() instanceof DateTimeInterface && $now >= $command->getDelayExecution())) &&
+                (
+                    !$command->getRunUntil() || ($command->getRunUntil() instanceof DateTimeInterface && $now <= $command->getRunUntil())
+                )
+            ) {
                 $noneExecution = false;
                 $output->writeln(
                     'Command <comment>' . $command->getCommand() .
@@ -174,6 +182,11 @@ class ExecuteCommand extends Command
                 if (!$input->getOption('dump')) {
                     $this->executeCommand($command, $output, $input);
                 }
+            } elseif ($command->getRunUntil() instanceof DateTimeInterface && $now > $command->getRunUntil()) {
+                $command->setExecutionMode(ScheduledCommand::MODE_ONDEMAND);
+
+                $this->em->getManager()->persist($command);
+                $this->em->getManager()->flush($command);
             }
         }
 

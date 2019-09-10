@@ -2,6 +2,7 @@
 
 namespace JMose\CommandSchedulerBundle\Service;
 
+use DateTimeInterface;
 use Doctrine\Bundle\DoctrineBundle\Registry;
 use ErrorException;
 use JMose\CommandSchedulerBundle\Entity\ScheduledCommand;
@@ -15,234 +16,21 @@ use JMose\CommandSchedulerBundle\Exception\CommandNotFoundException;
  */
 class SchedulerService
 {
-
-    /**
-     * @var Registry
-     */
+    /** @var Registry */
     private $doctrine;
 
-    /**
-     *
-     * @var string
-     */
+    /** @var string */
     private $commandName;
 
-    /**
-     *
-     * @var ScheduledCommand
-     */
+    /** @var ScheduledCommand */
     private $command;
 
     /**
-     *
      * @param Registry $doctrine
      */
     public function __construct(Registry $doctrine)
     {
         $this->doctrine = $doctrine;
-    }
-
-    /** Aliases */
-
-    /**
-     * @param $commandName
-     * @return SchedulerService
-     */
-    public function command($commandName)
-    {
-        return $this->cmd($commandName);
-    }
-
-    /**
-     * @param $commandName
-     * @return SchedulerService
-     */
-    public function get($commandName)
-    {
-        return $this->cmd($commandName);
-    }
-
-    /**
-     * Set command to handle
-     *
-     * @param string $commandName
-     * @return SchedulerService A copy of SchedulerService
-     */
-    public function cmd($commandName)
-    {
-        $this->commandName = $commandName;
-
-        return clone $this;
-    }
-
-    /**
-     * Check if command exists
-     *
-     * @return bool
-     * @throws ErrorException
-     */
-    public function exists()
-    {
-        try {
-            if ($this->getCommand()) {
-                return true;
-            }
-        } catch (CommandNotFoundException $e) {
-            return false;
-        }
-    }
-
-
-    /**
-     * Schedule to Run in next cycle
-     *
-     * @throws ErrorException
-     */
-    public function run()
-    {
-        return $this->commandAction('run');
-    }
-
-    /**
-     * Prevent from run in next cycle
-     *
-     * @return SchedulerService
-     * @throws ErrorException
-     */
-    public function stop()
-    {
-        return $this->commandAction('stop');
-    }
-
-    /**
-     * Disable command
-     *
-     * @return SchedulerService
-     * @throws ErrorException
-     */
-    public function disable()
-    {
-        return $this->commandAction('disable');
-    }
-
-    /**
-     * Enable command
-     *
-     * @return SchedulerService
-     * @throws ErrorException
-     */
-    public function enable()
-    {
-        return $this->commandAction('enable');
-    }
-
-    /**
-     * Change to On Demand command
-     *
-     * @return SchedulerService
-     * @throws ErrorException
-     */
-    public function setOnDemand()
-    {
-        return $this->commandAction(ScheduledCommand::MODE_ONDEMAND);
-    }
-
-    /**
-     * Change to Cron Schedule Command (Auto)
-     *
-     * @param null $newCronExpression
-     * @return SchedulerService
-     * @throws CommandNotFoundException
-     * @throws ErrorException
-     */
-    public function setAuto( $newCronExpression = null)
-    {
-        if ( $newCronExpression ) {
-            $this->getCommand()->setCronExpression( $newCronExpression);
-        }
-
-        return $this->commandAction(ScheduledCommand::MODE_AUTO);
-    }
-
-    /**
-     * Command Statuses
-     */
-
-    /**
-     * Return true if last exec code is -1
-     *
-     * @return bool
-     * @throws ErrorException
-     */
-    public function isFailing()
-    {
-        return $this->commandStatus('failing');
-    }
-
-    /**
-     * True if command is locked or is scheduled to run in next cycle
-     *
-     * @return bool
-     * @throws ErrorException
-     */
-    public function isRunning()
-    {
-        return $this->commandStatus('running');
-    }
-
-    /**
-     * True if command is not locked and it is not scheduled to run in next cycle
-     *
-     * @return bool
-     * @throws ErrorException
-     */
-    public function isStopped()
-    {
-        return $this->commandStatus('stopped');
-    }
-
-    /**
-     * True if command is disabled
-     *
-     * @return bool
-     * @throws ErrorException
-     */
-    public function isDisabled()
-    {
-        return $this->commandStatus('disabled');
-    }
-
-    /**
-     * True if command is enabled
-     *
-     * @return bool
-     * @throws ErrorException
-     */
-    public function isEnabled()
-    {
-        return $this->commandStatus('enabled');
-    }
-
-    /**
-     * True if it is an On-Demand command
-     *
-     * @return bool
-     * @throws ErrorException
-     */
-    public function isOnDemand()
-    {
-        return $this->commandStatus(ScheduledCommand::MODE_ONDEMAND);
-    }
-
-    /**
-     * True if it is not an On-Demand Command
-     *
-     * @return bool
-     * @throws ErrorException
-     */
-    public function isAuto()
-    {
-        return $this->commandStatus(ScheduledCommand::MODE_AUTO);
     }
 
     /**
@@ -251,7 +39,7 @@ class SchedulerService
      * @throws CommandNotFoundException
      * @throws ErrorException
      */
-    private function getCommand()
+    private function getCommand(): ScheduledCommand
     {
         if ($this->command) {
             return $this->command;
@@ -272,48 +60,83 @@ class SchedulerService
         throw new CommandNotFoundException($this->commandName);
     }
 
+    /**
+     * @param $commandName
+     * @return SchedulerService
+     */
+    public function command(string $commandName): SchedulerService
+    {
+        return $this->cmd($commandName);
+    }
 
     /**
-     * This give access to control command behavioral
+     * @param $commandName
+     * @return SchedulerService
+     */
+    public function get(string $commandName): SchedulerService
+    {
+        return $this->cmd($commandName);
+    }
+
+    /**
+     * Set command to handle
      *
-     * @param string $action
+     * @param string $commandName
+     * @return SchedulerService A copy of SchedulerService
+     */
+    public function cmd(string $commandName): SchedulerService
+    {
+        $this->commandName = $commandName;
+
+        return clone $this;
+    }
+
+    /**
+     * Check if command exists
+     *
+     * @return bool
+     * @throws ErrorException
+     */
+    public function exists(): bool
+    {
+        try {
+            if ($this->getCommand()) {
+                return true;
+            }
+        } catch (CommandNotFoundException $e) {
+            return false;
+        }
+    }
+
+
+    /**
+     * Schedule to Run in next cycle
+     *
+     * @throws ErrorException
+     */
+    public function run()
+    {
+        $cmd = $this->getCommand()
+            ->setExecuteImmediately(true)
+            ->setDelayExecution(null);
+
+        $this->doctrine->getManager()->persist($cmd);
+        $this->doctrine->getManager()->flush($cmd);
+    }
+
+    /**
+     * Prevent from run in next cycle
+     *
      * @return SchedulerService
      * @throws ErrorException
-     * @throws \InvalidArgumentException
-     * @throws \BadMethodCallException
      */
-    private function commandAction($action)
+    public function stop(): self
     {
-        $cmd = $this->getCommand();
+        $cmd = $this->getCommand()
+            ->setExecuteImmediately(false)
+        ;
 
-        switch ($action) {
-            case 'run':
-                $cmd->setExecuteImmediately(true);
-                break;
-            case 'stop':
-                $cmd->setExecuteImmediately(false);
-                break;
-            case 'disable':
-                $cmd->setDisabled(true);
-                break;
-            case 'enable':
-                $cmd->setDisabled(false);
-                break;
-            case ScheduledCommand::MODE_ONDEMAND:
-                $cmd->setExecutionMode(ScheduledCommand::MODE_ONDEMAND);
-                break;
-            case ScheduledCommand::MODE_AUTO:
-                if (CronExpressionLib::isValidExpression($cmd->getCronExpression())) {
-                    $cmd->setExecutionMode(ScheduledCommand::MODE_AUTO);
-                } else {
-                    throw new \InvalidArgumentException('Invalid Cron Expression.');
-                }
-                break;
-            default:
-                throw new \BadMethodCallException($action . ' is not a valid operation.');
-        }
 
-        // Persist changes to DDBB
         $this->doctrine->getManager()->persist($cmd);
         $this->doctrine->getManager()->flush($cmd);
 
@@ -321,31 +144,215 @@ class SchedulerService
     }
 
     /**
-     * @param string $status
-     * @return bool
+     * Disable command
+     *
+     * @return SchedulerService
      * @throws ErrorException
      */
-    private function commandStatus($status)
+    public function disable(): self
+    {
+        $cmd = $this->getCommand()
+            ->setDisabled(true);
+
+        $this->doctrine->getManager()->persist($cmd);
+        $this->doctrine->getManager()->flush($cmd);
+
+        return $this;
+    }
+
+    /**
+     * Enable command
+     *
+     * @return SchedulerService
+     * @throws ErrorException
+     */
+    public function enable(): self
+    {
+        $cmd = $this->getCommand()
+            ->setDisabled(false);;
+
+        $this->doctrine->getManager()->persist($cmd);
+        $this->doctrine->getManager()->flush($cmd);
+
+        return $this;
+    }
+
+    /**
+     * Change to On Demand command
+     *
+     * @return SchedulerService
+     * @throws ErrorException
+     */
+    public function setOnDemand(): self
+    {
+        $cmd = $this->getCommand()
+            ->setExecutionMode(ScheduledCommand::MODE_ONDEMAND)
+            ->setRunUntil(null)
+            ->setDelayExecution(null);
+
+        $this->doctrine->getManager()->persist($cmd);
+        $this->doctrine->getManager()->flush($cmd);
+
+        return $this;
+    }
+
+    /**
+     * Change to Cron Schedule Command (Auto)
+     *
+     * @param null $newCronExpression
+     * @return SchedulerService
+     * @throws CommandNotFoundException
+     * @throws ErrorException
+     */
+    public function setAuto($newCronExpression = null): self
+    {
+        if ($newCronExpression) {
+            $this->getCommand()->setCronExpression($newCronExpression);
+        }
+
+        $cmd = $this->getCommand();
+
+        if (CronExpressionLib::isValidExpression($cmd->getCronExpression())) {
+            $cmd->setExecutionMode(ScheduledCommand::MODE_AUTO);
+        } else {
+            throw new \InvalidArgumentException('Invalid Cron Expression.');
+        }
+
+        $this->doctrine->getManager()->persist($cmd);
+        $this->doctrine->getManager()->flush($cmd);
+
+        return $this;
+    }
+
+    /**
+     * @param DateTimeInterface $delayUntil
+     * @return SchedulerService
+     * @throws CommandNotFoundException
+     * @throws ErrorException
+     */
+    public function runAfter(DateTimeInterface $delayUntil): self
     {
         $cmd = $this->getCommand();
 
-        switch ($status) {
-            case 'failing':
-                return ($cmd->getLastReturnCode() == -1);
-            case 'running':
-                return ($cmd->isLocked() || $cmd->getExecuteImmediately());
-            case 'stopped':
-                return (!$cmd->isLocked() && !$cmd->getExecuteImmediately());
-            case 'enabled':
-                return (!$cmd->isDisabled());
-            case 'disabled':
-                return $cmd->isDisabled();
-            case ScheduledCommand::MODE_ONDEMAND:
-                return ($cmd->getExecutionMode() == ScheduledCommand::MODE_ONDEMAND);
-            case ScheduledCommand::MODE_AUTO:
-                return ($cmd->getExecutionMode() == ScheduledCommand::MODE_AUTO);
-            default:
-                throw new \InvalidArgumentException($status . ' is not a valid operation.');
-        }
+        $cmd->setDelayExecution($delayUntil)
+            ->setExecutionMode(ScheduledCommand::MODE_AUTO);
+
+        $this->doctrine->getManager()->persist($cmd);
+        $this->doctrine->getManager()->flush($cmd);
+
+        return $this;
+    }
+
+    /**
+     * @param DateTimeInterface $stopDate
+     * @return $this
+     * @throws CommandNotFoundException
+     * @throws ErrorException
+     */
+    public function runUntil(DateTimeInterface $stopDate)
+    {
+        $cmd = $this->getCommand();
+
+        $cmd->setRunUntil($stopDate);
+
+        $this->doctrine->getManager()->persist($cmd);
+        $this->doctrine->getManager()->flush($cmd);
+
+        return $this;
+    }
+
+    /**
+     * Command Statuses
+     */
+
+    /**
+     * Return true if last exec code is -1
+     *
+     * @return bool
+     * @throws ErrorException
+     */
+    public function isFailing(): bool
+    {
+        $cmd = $this->getCommand();
+
+        return ($cmd->getLastReturnCode() == -1);
+    }
+
+    /**
+     * True if command is locked or is scheduled to run in next cycle
+     *
+     * @return bool
+     * @throws ErrorException
+     */
+    public function isRunning(): bool
+    {
+        $cmd = $this->getCommand();
+
+        return ($cmd->isLocked() || $cmd->getExecuteImmediately());
+    }
+
+    /**
+     * True if command is not locked and it is not scheduled to run in next cycle
+     *
+     * @return bool
+     * @throws ErrorException
+     */
+    public function isStopped(): bool
+    {
+        $cmd = $this->getCommand();
+
+        return (!$cmd->isLocked() && !$cmd->getExecuteImmediately());
+    }
+
+    /**
+     * True if command is disabled
+     *
+     * @return bool
+     * @throws ErrorException
+     */
+    public function isDisabled(): bool
+    {
+        $cmd = $this->getCommand();
+
+        return $cmd->isDisabled();
+    }
+
+    /**
+     * True if command is enabled
+     *
+     * @return bool
+     * @throws ErrorException
+     */
+    public function isEnabled(): bool
+    {
+        $cmd = $this->getCommand();
+
+        return (!$cmd->isDisabled());
+    }
+
+    /**
+     * True if it is an On-Demand command
+     *
+     * @return bool
+     * @throws ErrorException
+     */
+    public function isOnDemand(): bool
+    {
+        $cmd = $this->getCommand();
+
+        return ($cmd->getExecutionMode() == ScheduledCommand::MODE_ONDEMAND);
+    }
+
+    /**
+     * True if it is not an On-Demand Command
+     *
+     * @return bool
+     * @throws ErrorException
+     */
+    public function isAuto(): bool
+    {
+        $cmd = $this->getCommand();
+
+        return ($cmd->getExecutionMode() == ScheduledCommand::MODE_AUTO);
     }
 }

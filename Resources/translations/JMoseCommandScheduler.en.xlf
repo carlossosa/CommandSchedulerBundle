@@ -119,6 +119,14 @@
                 <source>detail.executionMode.ondemand</source>
                 <target>ON-Demand (Forced)</target>
             </trans-unit>
+            <trans-unit id="217">
+                <source>detail.delayExecution</source>
+                <target>Delay Execution</target>
+            </trans-unit>
+            <trans-unit id="218">
+                <source>detail.runUntil</source>
+                <target>Run Until</target>
+            </trans-unit>
 
             <!-- Flashs messages -->
             <trans-unit id="300">

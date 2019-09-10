@@ -6,6 +6,7 @@ use JMose\CommandSchedulerBundle\Entity\ScheduledCommand;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
@@ -117,6 +118,22 @@ class ScheduledCommandType extends AbstractType
             SubmitType::class,
             [
                 'label' => 'detail.save',
+            ]
+        );
+
+        $builder->add(
+            'delayExecution',
+            DateTimeType::class,
+            [
+                'label' => 'detail.delayExecution',
+            ]
+        );
+
+        $builder->add(
+            'runUntil',
+            DateTimeType::class,
+            [
+                'label' => 'detail.runUntil',
             ]
         );
 

@@ -2,6 +2,7 @@
 
 namespace JMose\CommandSchedulerBundle\Entity;
 
+use DateTime;
 use DateTimeInterface;
 
 /**

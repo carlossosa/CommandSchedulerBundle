@@ -2,6 +2,8 @@
 
 namespace JMose\CommandSchedulerBundle\Service;
 
+use Doctrine\Bundle\DoctrineBundle\Registry;
+use ErrorException;
 use JMose\CommandSchedulerBundle\Entity\ScheduledCommand;
 use Cron\CronExpression as CronExpressionLib;
 use JMose\CommandSchedulerBundle\Exception\CommandNotFoundException;
@@ -15,7 +17,7 @@ class SchedulerService
 {
 
     /**
-     * @var \Doctrine\Bundle\DoctrineBundle\Registry
+     * @var Registry
      */
     private $doctrine;
 
@@ -33,9 +35,9 @@ class SchedulerService
 
     /**
      *
-     * @param \Doctrine\Bundle\DoctrineBundle\Registry $doctrine
+     * @param Registry $doctrine
      */
-    public function __construct(\Doctrine\Bundle\DoctrineBundle\Registry $doctrine)
+    public function __construct(Registry $doctrine)
     {
         $this->doctrine = $doctrine;
     }
@@ -77,7 +79,7 @@ class SchedulerService
      * Check if command exists
      *
      * @return bool
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function exists()
     {
@@ -94,7 +96,7 @@ class SchedulerService
     /**
      * Schedule to Run in next cycle
      *
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function run()
     {
@@ -105,7 +107,7 @@ class SchedulerService
      * Prevent from run in next cycle
      *
      * @return SchedulerService
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function stop()
     {
@@ -116,7 +118,7 @@ class SchedulerService
      * Disable command
      *
      * @return SchedulerService
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function disable()
     {
@@ -127,7 +129,7 @@ class SchedulerService
      * Enable command
      *
      * @return SchedulerService
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function enable()
     {
@@ -138,7 +140,7 @@ class SchedulerService
      * Change to On Demand command
      *
      * @return SchedulerService
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function setOnDemand()
     {
@@ -151,7 +153,7 @@ class SchedulerService
      * @param null $newCronExpression
      * @return SchedulerService
      * @throws CommandNotFoundException
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function setAuto( $newCronExpression = null)
     {
@@ -170,7 +172,7 @@ class SchedulerService
      * Return true if last exec code is -1
      *
      * @return bool
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function isFailing()
     {
@@ -181,7 +183,7 @@ class SchedulerService
      * True if command is locked or is scheduled to run in next cycle
      *
      * @return bool
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function isRunning()
     {
@@ -192,7 +194,7 @@ class SchedulerService
      * True if command is not locked and it is not scheduled to run in next cycle
      *
      * @return bool
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function isStopped()
     {
@@ -203,7 +205,7 @@ class SchedulerService
      * True if command is disabled
      *
      * @return bool
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function isDisabled()
     {
@@ -214,7 +216,7 @@ class SchedulerService
      * True if command is enabled
      *
      * @return bool
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function isEnabled()
     {
@@ -225,7 +227,7 @@ class SchedulerService
      * True if it is an On-Demand command
      *
      * @return bool
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function isOnDemand()
     {
@@ -236,7 +238,7 @@ class SchedulerService
      * True if it is not an On-Demand Command
      *
      * @return bool
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function isAuto()
     {
@@ -247,7 +249,7 @@ class SchedulerService
      *
      * @return ScheduledCommand
      * @throws CommandNotFoundException
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     private function getCommand()
     {
@@ -256,7 +258,7 @@ class SchedulerService
         }
 
         if (!$this->commandName) {
-            throw new \ErrorException('Missing Command Name.');
+            throw new ErrorException('Missing Command Name.');
         }
 
         $cmd = $this->doctrine->getRepository(ScheduledCommand::class)->findOneBy([
@@ -276,7 +278,7 @@ class SchedulerService
      *
      * @param string $action
      * @return SchedulerService
-     * @throws \ErrorException
+     * @throws ErrorException
      * @throws \InvalidArgumentException
      * @throws \BadMethodCallException
      */
@@ -321,7 +323,7 @@ class SchedulerService
     /**
      * @param string $status
      * @return bool
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     private function commandStatus($status)
     {

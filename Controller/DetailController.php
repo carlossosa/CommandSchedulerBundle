@@ -107,12 +107,12 @@ class DetailController extends BaseController
 
             // Add a flash message and do a redirect to the list
             $this->get('session')->getFlashBag()
-                ->add('success', $this->get('translator')->trans('flash.success', [], 'JMoseCommandScheduler'));
+                ->add('success', $this->translator->trans('flash.success', [], 'JMoseCommandScheduler'));
 
             return $this->redirect($this->generateUrl('jmose_command_scheduler_list'));
 
         }
-        
+
         // Redirect to indexAction with the form object that has validation errors
         return $this->forward(
             'JMoseCommandSchedulerBundle:Detail:index',

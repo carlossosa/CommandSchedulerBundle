@@ -4,6 +4,7 @@ namespace JMose\CommandSchedulerBundle\Controller;
 
 use JMose\CommandSchedulerBundle\Entity\ScheduledCommand;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -14,6 +15,18 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class ListController extends BaseController
 {
+    /**
+     * @var string
+     */
+    private $lockTimeout;
+
+    /**
+     * @param $lockTimeout string
+     */
+    public function setLockTimeout($lockTimeout)
+    {
+        $this->lockTimeout = $lockTimeout;
+    }
 
     /**
      * @return \Symfony\Component\HttpFoundation\Response
@@ -44,7 +57,7 @@ class ListController extends BaseController
 
         // Add a flash message and do a redirect to the list
         $this->get('session')->getFlashBag()
-            ->add('success', $this->get('translator')->trans('flash.deleted', [], 'JMoseCommandScheduler'));
+            ->add('success', $this->translator->trans('flash.deleted', [], 'JMoseCommandScheduler'));
 
         return $this->redirect($this->generateUrl('jmose_command_scheduler_list'));
     }
@@ -65,9 +78,10 @@ class ListController extends BaseController
 
     /**
      * @param $id
-     * @return \Symfony\Component\HttpFoundation\Response
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\RedirectResponse
      */
-    public function executeAction($id)
+    public function executeAction($id, Request $request)
     {
         $entityManager = $this->getDoctrineManager();
         $scheduledCommand = $entityManager->getRepository(ScheduledCommand::class)->find($id);
@@ -76,16 +90,21 @@ class ListController extends BaseController
 
         // Add a flash message and do a redirect to the list
         $this->get('session')->getFlashBag()
-            ->add('success', $this->get('translator')->trans('flash.execute', [], 'JMoseCommandScheduler'));
+            ->add('success', $this->translator->trans('flash.execute', [], 'JMoseCommandScheduler'));
+
+        if ($request->query->has('referer')) {
+            return $this->redirect($request->getSchemeAndHttpHost().urldecode($request->query->get('referer')));
+        }
 
         return $this->redirect($this->generateUrl('jmose_command_scheduler_list'));
     }
 
     /**
      * @param $id
-     * @return \Symfony\Component\HttpFoundation\Response
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\RedirectResponse
      */
-    public function unlockAction($id)
+    public function unlockAction($id, Request $request)
     {
         $entityManager = $this->getDoctrineManager();
         $scheduledCommand = $entityManager->getRepository(ScheduledCommand::class)->find($id);
@@ -94,7 +113,11 @@ class ListController extends BaseController
 
         // Add a flash message and do a redirect to the list
         $this->get('session')->getFlashBag()
-            ->add('success', $this->get('translator')->trans('flash.unlocked', [], 'JMoseCommandScheduler'));
+            ->add('success', $this->translator->trans('flash.unlocked', [], 'JMoseCommandScheduler'));
+
+        if ($request->query->has('referer')) {
+            return $this->redirect($request->getSchemeAndHttpHost().urldecode($request->query->get('referer')));
+        }
 
         return $this->redirect($this->generateUrl('jmose_command_scheduler_list'));
     }
@@ -110,7 +133,7 @@ class ListController extends BaseController
     {
         $failedCommands = $this->getDoctrineManager()
             ->getRepository(ScheduledCommand::class)
-            ->findFailedAndTimeoutCommands($this->container->getParameter('jmose_command_scheduler.lock_timeout'));
+            ->findFailedAndTimeoutCommands($this->lockTimeout);
 
         $jsonArray = [];
         foreach ($failedCommands as $command) {

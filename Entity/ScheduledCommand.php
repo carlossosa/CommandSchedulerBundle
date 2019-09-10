@@ -2,6 +2,8 @@
 
 namespace JMose\CommandSchedulerBundle\Entity;
 
+use DateTimeInterface;
+
 /**
  * Entity ScheduledCommand
  *
@@ -38,7 +40,17 @@ class ScheduledCommand
     private $cronExpression;
 
     /**
-     * @var \DateTime
+     * @var DateTimeInterface|null
+     */
+    private $delayExecution;
+
+    /**
+     * @var DateTimeInterface|null
+     */
+    private $runUntil;
+
+    /**
+     * @var DateTimeInterface
      */
     private $lastExecution;
 
@@ -89,7 +101,7 @@ class ScheduledCommand
      */
     public function __construct()
     {
-        $this->setLastExecution(new \DateTime());
+        $this->setLastExecution(new DateTime());
         $this->setLocked(false);
         $this->setExecutionMode(self::MODE_AUTO);
     }
@@ -212,7 +224,7 @@ class ScheduledCommand
     /**
      * Get lastExecution
      *
-     * @return \DateTime
+     * @return DateTime
      */
     public function getLastExecution()
     {
@@ -222,7 +234,7 @@ class ScheduledCommand
     /**
      * Set lastExecution
      *
-     * @param \DateTime $lastExecution
+     * @param DateTime $lastExecution
      * @return ScheduledCommand
      */
     public function setLastExecution($lastExecution)
@@ -410,6 +422,44 @@ class ScheduledCommand
         $this->executionMode = $executionMode;
 
         return $this;
+    }
+
+    /**
+     * @param $delayExecution
+     * @return $this
+     */
+    public function setDelayExecution( ?DateTimeInterface $delayExecution = null)
+    {
+        $this->delayExecution = $delayExecution;
+
+        return $this;
+    }
+
+    /**
+     * @return DateTimeInterface|null
+     */
+    public function getDelayExecution():?DateTimeInterface
+    {
+        return $this->delayExecution;
+    }
+
+    /**
+     * @param $runUntil
+     * @return $this
+     */
+    public function setRunUntil( ?DateTimeInterface $runUntil = null)
+    {
+        $this->runUntil = $runUntil;
+
+        return $this;
+    }
+
+    /**
+     * @return DateTimeInterface|null
+     */
+    public function getRunUntil():?DateTimeInterface
+    {
+        return $this->runUntil;
     }
 
 }

@@ -3,7 +3,13 @@
 namespace JMose\CommandSchedulerBundle\Command;
 
 use Cron\CronExpression;
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
+use Doctrine\Common\Persistence\Mapping\MappingException;
+use Doctrine\Common\Persistence\ObjectManager;
+use Doctrine\DBAL\ConnectionException;
+use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\OptimisticLockException;
+use Doctrine\ORM\ORMException;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -11,6 +17,7 @@ use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
 use JMose\CommandSchedulerBundle\Entity\ScheduledCommand;
+use Symfony\Bridge\Doctrine\ManagerRegistry;
 
 /**
  * Class ExecuteCommand : This class is the entry point to execute all scheduled command
@@ -18,13 +25,18 @@ use JMose\CommandSchedulerBundle\Entity\ScheduledCommand;
  * @author  Julien Guyon <julienguyon@hotmail.com>
  * @package JMose\CommandSchedulerBundle\Command
  */
-class ExecuteCommand extends ContainerAwareCommand
+class ExecuteCommand extends Command
 {
 
     /**
-     * @var \Doctrine\ORM\EntityManager
+     * @var EntityManager
      */
     private $em;
+
+    /**
+     * @var ObjectManager|object
+     */
+    private $registry;
 
     /**
      * @var string
@@ -40,6 +52,27 @@ class ExecuteCommand extends ContainerAwareCommand
      * @var integer
      */
     private $commandsVerbosity;
+
+    private $managerName;
+
+    /**
+     * ExecuteCommand constructor.
+     * @param ManagerRegistry $managerRegistry
+     * @param $managerName
+     * @param $logPath
+     */
+    public function __construct(ManagerRegistry $managerRegistry, $managerName, $logPath)
+    {
+        $this->managerName = $managerName;
+        $this->registry = $managerRegistry->getManager($managerName);
+        $this->logPath = $logPath;
+
+        // If logpath is not set to false, append the directory separator to it
+        if (false !== $this->logPath) {
+            $this->logPath = rtrim($this->logPath, '/\\').DIRECTORY_SEPARATOR;
+        }
+        parent::__construct();
+    }
 
     /**
      * @inheritdoc
@@ -63,12 +96,6 @@ class ExecuteCommand extends ContainerAwareCommand
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
         $this->dumpMode = $input->getOption('dump');
-        $this->logPath = $this->getContainer()->getParameter('jmose_command_scheduler.log_path');
-
-        // If logpath is not set to false, append the directory separator to it
-        if (false !== $this->logPath) {
-            $this->logPath = rtrim($this->logPath, '/\\') . DIRECTORY_SEPARATOR;
-        }
 
         // Store the original verbosity before apply the quiet parameter
         $this->commandsVerbosity = $output->getVerbosity();
@@ -78,8 +105,8 @@ class ExecuteCommand extends ContainerAwareCommand
         }
 
         // Create a new Manager to Avoid Entity Manager is Closed Error
-        $manager = $this->getContainer()->get('doctrine')->getManager(
-            $this->getContainer()->getParameter('jmose_command_scheduler.doctrine_manager')
+        $manager = $this->registry->getManager(
+            $this->managerName
         );
         $this->em = $manager->create(
             $manager->getConnection(),
@@ -91,9 +118,10 @@ class ExecuteCommand extends ContainerAwareCommand
      * @param InputInterface $input
      * @param OutputInterface $output
      * @return int|null|void
-     * @throws \Doctrine\DBAL\ConnectionException
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws ORMException
+     * @throws OptimisticLockException
+     * @throws MappingException
+     * @throws ConnectionException
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
@@ -158,10 +186,10 @@ class ExecuteCommand extends ContainerAwareCommand
      * @param ScheduledCommand $scheduledCommand
      * @param OutputInterface $output
      * @param InputInterface $input
-     * @throws \Doctrine\DBAL\ConnectionException
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
+     * @throws ConnectionException
+     * @throws ORMException
+     * @throws OptimisticLockException
+     * @throws MappingException
      */
     private function executeCommand(ScheduledCommand $scheduledCommand, OutputInterface $output, InputInterface $input)
     {

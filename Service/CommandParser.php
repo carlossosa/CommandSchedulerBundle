@@ -1,10 +1,12 @@
 <?php
 namespace JMose\CommandSchedulerBundle\Service;
 
+use Exception;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\StreamOutput;
-use Symfony\Component\HttpKernel\Kernel;
+use Symfony\Component\HttpKernel\KernelInterface;
+use Throwable;
 
 /**
  * Class CommandChoiceList
@@ -16,7 +18,7 @@ class CommandParser
 {
 
     /**
-     * @var Kernel
+     * @var KernelInterface
      */
     private $kernel;
 
@@ -26,10 +28,10 @@ class CommandParser
     private $excludedNamespaces;
 
     /**
-     * @param Kernel $kernel
+     * @param KernelInterface $kernel
      * @param array $excludedNamespaces
      */
-    public function __construct(Kernel $kernel, array $excludedNamespaces = array())
+    public function __construct(KernelInterface $kernel, array $excludedNamespaces = array())
     {
         $this->kernel = $kernel;
         $this->excludedNamespaces = $excludedNamespaces;
@@ -39,7 +41,8 @@ class CommandParser
      * Execute the console command "list" with XML output to have all available command
      *
      * @return array
-     * @throws \Exception
+     * @throws Exception
+     * @throws Throwable
      */
     public function getCommands()
     {
@@ -49,7 +52,8 @@ class CommandParser
         $input = new ArrayInput(
             array(
                 'command' => 'list',
-                '--format' => 'xml'
+                '--format' => 'xml',
+                '--no-debug'
             )
         );
 
@@ -65,6 +69,7 @@ class CommandParser
      *
      * @param $xml
      * @return array
+     * @throws Throwable
      */
     private function extractCommandsFromXML($xml)
     {
@@ -72,20 +77,29 @@ class CommandParser
             return array();
         }
 
-        $node = new \SimpleXMLElement($xml);
-        $commandsList = array();
+        try {
+            $node = new \SimpleXMLElement($xml);
+            $commandsList = array();
 
-        foreach ($node->namespaces->namespace as $namespace) {
-            $namespaceId = (string)$namespace->attributes()->id;
+            foreach ($node->namespaces->namespace as $namespace) {
+                $namespaceId = (string)$namespace->attributes()->id;
 
-            if (!in_array($namespaceId, $this->excludedNamespaces)) {
-                foreach ($namespace->command as $command) {
-                    $commandsList[$namespaceId][(string)$command] = (string)$command;
+                if (!in_array($namespaceId, $this->excludedNamespaces)) {
+                    foreach ($namespace->command as $command) {
+                        $commandsList[$namespaceId][(string)$command] = (string)$command;
+                    }
                 }
             }
-        }
 
-        return $commandsList;
+            return $commandsList;
+        } catch (Throwable $exception) {
+            if ( function_exists('dump')) {
+                dump($xml);
+                dump($exception);
+            }
+
+            return [];
+        }
     }
 
 }

@@ -32,6 +32,14 @@ JMose\CommandSchedulerBundle\Entity\ScheduledCommand:
             unique: false
             nullable: true
             precision: 0
+        delayExecution:
+            type: datetime
+            length: null
+            nullable: true
+        runUntil:
+            type: datetime
+            length: null
+            nullable: true
         lastExecution:
             type: datetime
             length: null

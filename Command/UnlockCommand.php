@@ -3,7 +3,8 @@
 namespace JMose\CommandSchedulerBundle\Command;
 
 use JMose\CommandSchedulerBundle\Entity\ScheduledCommand;
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
+use Symfony\Bridge\Doctrine\ManagerRegistry;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -15,13 +16,18 @@ use Symfony\Component\Console\Output\OutputInterface;
  * @author  Marcel Pfeiffer <m.pfeiffer@strucnamics.de>
  * @package JMose\CommandSchedulerBundle\Command
  */
-class UnlockCommand extends ContainerAwareCommand
+class UnlockCommand extends Command
 {
 
     /**
      * @var \Doctrine\ORM\EntityManager
      */
     private $em;
+
+    /**
+     * @var integer
+     */
+    private $defaultLockTimeout;
 
     /**
      * @var integer|boolean Number of seconds after a command is considered as timeout
@@ -37,6 +43,20 @@ class UnlockCommand extends ContainerAwareCommand
      * @var string name of the command to be unlocked
      */
     private $scheduledCommandName = [];
+
+    /**
+     * UnlockCommand constructor.
+     * @param ManagerRegistry $managerRegistry
+     * @param $managerName
+     * @param $lockTimeout
+     */
+    public function __construct(ManagerRegistry $managerRegistry, $managerName, $lockTimeout)
+    {
+        $this->em = $managerRegistry->getManager($managerName);
+        $this->defaultLockTimeout = $lockTimeout;
+
+        parent::__construct();
+    }
 
     /**
      * @inheritdoc
@@ -69,16 +89,12 @@ class UnlockCommand extends ContainerAwareCommand
 
         $this->lockTimeout = $input->getOption('lock-timeout', null);
         if ($this->lockTimeout === null) {
-            $this->lockTimeout = $this->getContainer()->getParameter('jmose_command_scheduler.lock_timeout');
+            $this->lockTimeout = $this->defaultLockTimeout;
         } else {
             if ($this->lockTimeout === 'false') {
                 $this->lockTimeout = false;
             }
         }
-
-        $this->em = $this->getContainer()->get('doctrine')->getManager(
-            $this->getContainer()->getParameter('jmose_command_scheduler.doctrine_manager')
-        );
     }
 
     /**
@@ -88,7 +104,7 @@ class UnlockCommand extends ContainerAwareCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        if ($this->unlockAll === false && $this->scheduledCommandName === NULL) {
+        if ($this->unlockAll === false && $this->scheduledCommandName === null) {
             $output->writeln('Either the name of a scheduled command or the --all option must be set.');
 
             return 1;
@@ -137,7 +153,8 @@ class UnlockCommand extends ContainerAwareCommand
             $command->getLastExecution() !== null &&
             $command->getLastExecution() >= (new \DateTime())->sub(
                 new \DateInterval(sprintf('PT%dS', $this->lockTimeout))
-            )) {
+            )
+        ) {
             $output->writeln(
                 sprintf('Skipping: Timout for scheduled Command "%s" has not run out.', $command->getName())
             );

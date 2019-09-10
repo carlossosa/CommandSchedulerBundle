@@ -185,8 +185,8 @@ class ExecuteCommand extends Command
             } elseif ($command->getRunUntil() instanceof DateTimeInterface && $now > $command->getRunUntil()) {
                 $command->setExecutionMode(ScheduledCommand::MODE_ONDEMAND);
 
-                $this->em->getManager()->persist($command);
-                $this->em->getManager()->flush($command);
+                $this->em->persist($command);
+                $this->em->flush($command);
             }
         }
 

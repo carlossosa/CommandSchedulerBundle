@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "carlossosa88/cron-expression",
-            "version": "v2.3.0-p1",
+            "version": "v2.3.0-p2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/carlossosa/cron-expression.git",
-                "reference": "87a6f6f527edcf6ee61226301ef185a1f895e453"
+                "reference": "07409e3178c416ac26d859a77effccd969bdb053"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/carlossosa/cron-expression/zipball/87a6f6f527edcf6ee61226301ef185a1f895e453",
-                "reference": "87a6f6f527edcf6ee61226301ef185a1f895e453",
+                "url": "https://api.github.com/repos/carlossosa/cron-expression/zipball/07409e3178c416ac26d859a77effccd969bdb053",
+                "reference": "07409e3178c416ac26d859a77effccd969bdb053",
                 "shasum": ""
             },
             "require": {

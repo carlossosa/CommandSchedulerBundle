@@ -77,6 +77,7 @@ class SchedulerServiceTest extends WebTestCase
         $cmdOnDemand = $this->schedulerService->cmd('on-demand');
         /** Trying to change it to Auto */
         $this->expectException(\InvalidArgumentException::class);
+
         $cmdOnDemand->setAuto();
     }
 

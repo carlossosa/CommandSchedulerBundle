@@ -25,12 +25,15 @@ class CronExpressionValidator extends ConstraintValidator
     {
         $value = (string)$value;
 
-        if ($this->context->getObject()->getExecutionMode() != ScheduledCommand::MODE_ONDEMAND &&
-            (null === $value || //Not Null
-                '' === $value || //Not Empty
-                !CronExpressionLib::isValidExpression($value) //Has to be a valid Cron Exp
-            )
-        ) {
+        if (
+            $this->context->getObject() &&
+            $this->context->getObject()->getExecutionMode() === ScheduledCommand::MODE_ONDEMAND) {
+            return;
+        }
+
+        try {
+            CronExpressionLib::factory($value);
+        } catch (\InvalidArgumentException $e) {
             $this->context->addViolation($constraint->message, array(), $value);
         }
 

@@ -212,7 +212,7 @@ class SchedulerService
 
         $cmd = $this->getCommand();
 
-        if (CronExpressionLib::isValidExpression($cmd->getCronExpression())) {
+        if ($cmd->getCronExpression() && CronExpressionLib::factory($cmd->getCronExpression())) {
             $cmd->setExecutionMode(ScheduledCommand::MODE_AUTO);
         } else {
             throw new \InvalidArgumentException('Invalid Cron Expression.');

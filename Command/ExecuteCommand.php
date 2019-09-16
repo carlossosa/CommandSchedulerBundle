@@ -146,10 +146,15 @@ class ExecuteCommand extends Command
         $noneExecution = true;
         foreach ($commands as $command) {
 
+            $this->em->refresh($this->em->merge($command));
+            if ($command->isDisabled() || $command->isLocked()) {
+                continue;
+            }
+
             if ($command->getExecutionMode() == ScheduledCommand::MODE_AUTO) {
                 /** @var ScheduledCommand $command */
                 $cron = CronExpression::factory($command->getCronExpression());
-                $nextRunDate = $cron->getNextRunDate($command->getLastExecution());
+                $nextRunDate = $cron->getNextRunDate($command->getLastExecution(), 0, false, null, false);
                 $now = new \DateTime();
             } else {
                 $nextRunDate = false;

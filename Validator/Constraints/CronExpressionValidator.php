@@ -34,7 +34,7 @@ class CronExpressionValidator extends ConstraintValidator
         try {
             CronExpressionLib::factory($value);
         } catch (\InvalidArgumentException $e) {
-            $this->context->addViolation($constraint->message, array(), $value);
+            $this->context->addViolation($constraint->message, [], $value);
         }
 
         return;

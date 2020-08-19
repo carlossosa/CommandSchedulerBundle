@@ -11,39 +11,45 @@ namespace App\Tests\Service;
 
 use JMose\CommandSchedulerBundle\Exception\CommandNotFoundException;
 use JMose\CommandSchedulerBundle\Service\SchedulerService;
+use JMose\CommandSchedulerBundle\Fixtures\ORM\LoadScheduledCommandData;
 use Liip\FunctionalTestBundle\Test\WebTestCase;
+use Liip\TestFixturesBundle\Test\FixturesTrait;
 
 class SchedulerServiceTest extends WebTestCase
 {
-    /**
-     * @var SchedulerService
-     */
-    private $schedulerService;
+    use FixturesTrait;
 
-    /**
-     * {@inheritdoc}
-     */
-    public function setUp()
+
+    public function testChangeToAuto()
     {
-        self::bootKernel();
+        // DataFixtures create 4 records
+        $this->loadFixtures([LoadScheduledCommandData::class]);
 
-        $this->schedulerService = static::$kernel->getContainer()
-            ->get(SchedulerService::class);
+        $schedulerService = $this->getContainer()->get(SchedulerService::class);
+
+        $cmdOnDemand = $this->schedulerService->cmd('on-demand');
+
+        $cmdOnDemand->setAuto('* * * * *');
+
+        $output = $this->runCommand('scheduler:execute');
+
+        $this->assertStringStartsWith('Start : Execute all scheduled command', $output);
+        $this->assertRegExp('/debug:config should be executed/', $output);
+        $this->assertRegExp('/Execute : debug:config/', $output);
     }
 
     public function testSchedulerService()
     {
-        $this->loadFixtures(
-            array(
-                'JMose\CommandSchedulerBundle\Fixtures\ORM\LoadScheduledCommandData'
-            )
-        );
+        // DataFixtures create 4 records
+        $this->loadFixtures([LoadScheduledCommandData::class]);
 
-        $cmdOnDemand = $this->schedulerService->cmd('on-demand');
-        $cmdOne = $this->schedulerService->cmd('one');
-        $cmdThree = $this->schedulerService->cmd('three');
-        $cmdFour = $this->schedulerService->cmd('four');
-        $cmdFake = $this->schedulerService->cmd('fake');
+        $schedulerService = $this->getContainer()->get(SchedulerService::class);
+
+        $cmdOnDemand = $schedulerService->cmd('on-demand');
+        $cmdOne = $schedulerService->cmd('one');
+        $cmdThree = $schedulerService->cmd('three');
+        $cmdFour = $schedulerService->cmd('four');
+        $cmdFake = $schedulerService->cmd('fake');
 
         /** Exists */
         $this->assertTrue($cmdOnDemand->exists());
@@ -60,38 +66,41 @@ class SchedulerServiceTest extends WebTestCase
         $this->assertTrue($cmdFour->isRunning());
     }
 
-    public function testCommandNotFoundException() {
+    public function testCommandNotFoundException()
+    {
+        $schedulerService = $this->getContainer()
+            ->get(SchedulerService::class);
+
         $this->expectException(CommandNotFoundException::class);
-        $this->schedulerService->command('fake')
-                        ->run()
-                    ;
+        $schedulerService->command('fake')->run();
     }
 
-    public function testInvalidCronException() {
-        $this->loadFixtures(
-            array(
-                'JMose\CommandSchedulerBundle\Fixtures\ORM\LoadScheduledCommandData'
-            )
-        );
+    public function testInvalidCronException()
+    {
+        // DataFixtures create 4 records
+        $this->loadFixtures([LoadScheduledCommandData::class]);
 
-        $cmdOnDemand = $this->schedulerService->cmd('on-demand');
+        $schedulerService = $this->getContainer()
+            ->get(SchedulerService::class);
+
+        $cmdOnDemand = $schedulerService->cmd('on-demand');
         /** Trying to change it to Auto */
         $this->expectException(\InvalidArgumentException::class);
 
         $cmdOnDemand->setAuto();
     }
 
-    public function testRunOnDemand() {
-        $this->loadFixtures(
-            array(
-                'JMose\CommandSchedulerBundle\Fixtures\ORM\LoadScheduledCommandData'
-            )
-        );
+    public function testRunOnDemand()
+    {
+        // DataFixtures create 4 records
+        $this->loadFixtures([LoadScheduledCommandData::class]);
 
-        $cmdOnDemand = $this->schedulerService->cmd('on-demand');
-        $cmdOne = $this->schedulerService->cmd('one');
-        $cmdTwo = $this->schedulerService->cmd('two');
-        $cmdFour = $this->schedulerService->cmd('four');
+        $schedulerService = $this->getContainer()->get(SchedulerService::class);
+
+        $cmdOnDemand = $schedulerService->cmd('on-demand');
+        $cmdOne = $schedulerService->cmd('one');
+        $cmdTwo = $schedulerService->cmd('two');
+        $cmdFour = $schedulerService->cmd('four');
 
         $cmdOnDemand->run();
         $cmdFour->stop();
@@ -110,22 +119,4 @@ class SchedulerServiceTest extends WebTestCase
         $this->assertRegExp('/Nothing to do/', $output);
     }
 
-    public function testChangeToAuto()
-    {
-        $this->loadFixtures(
-            array(
-                'JMose\CommandSchedulerBundle\Fixtures\ORM\LoadScheduledCommandData'
-            )
-        );
-
-        $cmdOnDemand = $this->schedulerService->cmd('on-demand');
-
-        $cmdOnDemand->setAuto('* * * * *');
-
-        $output = $this->runCommand('scheduler:execute');
-
-        $this->assertStringStartsWith('Start : Execute all scheduled command', $output);
-        $this->assertRegExp('/debug:config should be executed/', $output);
-        $this->assertRegExp('/Execute : debug:config/', $output);
-    }
 }

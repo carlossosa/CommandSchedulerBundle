@@ -126,6 +126,7 @@ class ScheduledCommandType extends AbstractType
             DateTimeType::class,
             [
                 'label' => 'detail.delayExecution',
+                'required' => false
             ]
         );
 
@@ -134,6 +135,7 @@ class ScheduledCommandType extends AbstractType
             DateTimeType::class,
             [
                 'label' => 'detail.runUntil',
+                'required' => false
             ]
         );
 

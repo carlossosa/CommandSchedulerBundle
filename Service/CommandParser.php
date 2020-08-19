@@ -1,22 +1,19 @@
 <?php
+
 namespace JMose\CommandSchedulerBundle\Service;
 
-use Exception;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\StreamOutput;
 use Symfony\Component\HttpKernel\KernelInterface;
-use Throwable;
 
 /**
- * Class CommandChoiceList
+ * Class CommandChoiceList.
  *
  * @author  Julien Guyon <julienguyon@hotmail.com>
- * @package JMose\CommandSchedulerBundle\Form
  */
 class CommandParser
 {
-
     /**
      * @var KernelInterface
      */
@@ -28,21 +25,32 @@ class CommandParser
     private $excludedNamespaces;
 
     /**
-     * @param KernelInterface $kernel
-     * @param array $excludedNamespaces
+     * @var array
      */
-    public function __construct(KernelInterface $kernel, array $excludedNamespaces = array())
+    private $includedNamespaces;
+
+    /**
+     * CommandParser constructor.
+     *
+     * @param KernelInterface $kernel
+     * @param array           $excludedNamespaces
+     * @param array           $includedNamespaces
+     */
+    public function __construct(KernelInterface $kernel, array $excludedNamespaces = [], array $includedNamespaces = [])
     {
         $this->kernel = $kernel;
         $this->excludedNamespaces = $excludedNamespaces;
+        $this->includedNamespaces = $includedNamespaces;
+
+        if (count($this->excludedNamespaces) > 0 && count($this->includedNamespaces) > 0) {
+            throw new \InvalidArgumentException('Cannot combine excludedNamespaces with includedNamespaces');
+        }
     }
 
     /**
-     * Execute the console command "list" with XML output to have all available command
+     * Execute the console command "list" with XML output to have all available command.
      *
      * @return array
-     * @throws Exception
-     * @throws Throwable
      */
     public function getCommands()
     {
@@ -50,11 +58,10 @@ class CommandParser
         $application->setAutoExit(false);
 
         $input = new ArrayInput(
-            array(
+            [
                 'command' => 'list',
                 '--format' => 'xml',
-                '--no-debug'
-            )
+            ]
         );
 
         $output = new StreamOutput(fopen('php://memory', 'w+'));
@@ -65,41 +72,37 @@ class CommandParser
     }
 
     /**
-     * Extract an array of available Symfony command from the XML output
+     * Extract an array of available Symfony command from the XML output.
      *
      * @param $xml
+     *
      * @return array
-     * @throws Throwable
      */
     private function extractCommandsFromXML($xml)
     {
-        if ($xml == '') {
-            return array();
-        }
-
-        try {
-            $node = new \SimpleXMLElement($xml);
-            $commandsList = array();
-
-            foreach ($node->namespaces->namespace as $namespace) {
-                $namespaceId = (string)$namespace->attributes()->id;
-
-                if (!in_array($namespaceId, $this->excludedNamespaces)) {
-                    foreach ($namespace->command as $command) {
-                        $commandsList[$namespaceId][(string)$command] = (string)$command;
-                    }
-                }
-            }
-
-            return $commandsList;
-        } catch (Throwable $exception) {
-            if ( function_exists('dump')) {
-                dump($xml);
-                dump($exception);
-            }
-
+        if ('' == $xml) {
             return [];
         }
-    }
 
+        $node = new \SimpleXMLElement($xml);
+        $commandsList = [];
+
+        foreach ($node->namespaces->namespace as $namespace) {
+            $namespaceId = (string) $namespace->attributes()->id;
+
+            if (
+                (count($this->excludedNamespaces) > 0 && in_array($namespaceId, $this->excludedNamespaces))
+                ||
+                (count($this->includedNamespaces) > 0 && !in_array($namespaceId, $this->includedNamespaces))
+            ) {
+                continue;
+            }
+
+            foreach ($namespace->command as $command) {
+                $commandsList[$namespaceId][(string) $command] = (string) $command;
+            }
+        }
+
+        return $commandsList;
+    }
 }

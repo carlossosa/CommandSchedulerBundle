@@ -3,13 +3,16 @@
 namespace JMose\CommandSchedulerBundle\Tests\Command;
 
 use JMose\CommandSchedulerBundle\Entity\ScheduledCommand;
+use JMose\CommandSchedulerBundle\Fixtures\ORM\LoadScheduledCommandData;
 use Liip\FunctionalTestBundle\Test\WebTestCase;
+use Liip\TestFixturesBundle\Test\FixturesTrait;
 
 /**
- * Class UnlockCommandTest
- * @package JMose\CommandSchedulerBundle\Tests\Command
+ * Class UnlockCommandTest.
  */
-class UnlockCommandTest extends WebTestCase {
+class UnlockCommandTest extends WebTestCase
+{
+    use FixturesTrait;
 
     /**
      * @var \Doctrine\ORM\EntityManager
@@ -17,29 +20,27 @@ class UnlockCommandTest extends WebTestCase {
     private $em;
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
-    public function setUp() {
+    public function setUp(): void
+    {
         self::bootKernel();
 
         $this->em = static::$kernel->getContainer()
-                ->get('doctrine')
-                ->getManager();
+            ->get('doctrine')
+            ->getManager();
     }
 
     /**
-     * Test scheduler:unlock without --all option
+     * Test scheduler:unlock without --all option.
      */
-    public function testUnlockAll() {
-        //DataFixtures create 4 records
-        $this->loadFixtures(
-                ['JMose\CommandSchedulerBundle\Fixtures\ORM\LoadScheduledCommandData']
-        );
+    public function testUnlockAll()
+    {
+        // DataFixtures create 4 records
+        $this->loadFixtures([LoadScheduledCommandData::class]);
 
         // One command is locked in fixture (2), another have a -1 return code as lastReturn (4)
-        $output = $this->runCommand(
-                'scheduler:unlock', ['--all' => true]
-        );
+        $output = $this->runCommand('scheduler:unlock', ['--all' => true], true)->getDisplay();
 
         $this->assertRegExp('/"two"/', $output);
         $this->assertNotRegExp('/"one"/', $output);
@@ -52,18 +53,15 @@ class UnlockCommandTest extends WebTestCase {
     }
 
     /**
-     * Test scheduler:unlock with given command name
+     * Test scheduler:unlock with given command name.
      */
-    public function testUnlockByName() {
-        //DataFixtures create 4 records
-        $this->loadFixtures(
-                ['JMose\CommandSchedulerBundle\Fixtures\ORM\LoadScheduledCommandData']
-        );
+    public function testUnlockByName()
+    {
+        // DataFixtures create 4 records
+        $this->loadFixtures([LoadScheduledCommandData::class]);
 
         // One command is locked in fixture (2), another have a -1 return code as lastReturn (4)
-        $output = $this->runCommand(
-                'scheduler:unlock', ['name' => 'two']
-        );
+        $output = $this->runCommand('scheduler:unlock', ['name' => 'two'], true)->getDisplay();
 
         $this->assertRegExp('/"two"/', $output);
 
@@ -74,18 +72,19 @@ class UnlockCommandTest extends WebTestCase {
     }
 
     /**
-     * Test scheduler:unlock with given command name and timeout
+     * Test scheduler:unlock with given command name and timeout.
      */
-    public function testUnlockByNameWithTimout() {
-        //DataFixtures create 4 records
-        $this->loadFixtures(
-                ['JMose\CommandSchedulerBundle\Fixtures\ORM\LoadScheduledCommandData']
-        );
+    public function testUnlockByNameWithTimout()
+    {
+        // DataFixtures create 4 records
+        $this->loadFixtures([LoadScheduledCommandData::class]);
 
         // One command is locked in fixture with last execution two days ago (2), another have a -1 return code as lastReturn (4)
         $output = $this->runCommand(
-                'scheduler:unlock', ['name' => 'two', '--lock-timeout' =>  3 * 24 * 60 * 60 ]
-        );
+            'scheduler:unlock',
+            ['name' => 'two', '--lock-timeout' => 3 * 24 * 60 * 60],
+            true
+        )->getDisplay();
 
         $this->assertRegExp('/Skipping/', $output);
         $this->assertRegExp('/"two"/', $output);
@@ -95,5 +94,4 @@ class UnlockCommandTest extends WebTestCase {
 
         $this->assertTrue($two->isLocked());
     }
-
 }

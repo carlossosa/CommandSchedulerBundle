@@ -40,7 +40,7 @@ class DetailController extends BaseController
     }
 
     /**
-     * Initialize a new ScheduledCommand object and forward to the index action (view)
+     * Initialize a new ScheduledCommand object and forward to the index action (view).
      *
      * @return Response
      */
@@ -49,7 +49,7 @@ class DetailController extends BaseController
         $scheduledCommand = new ScheduledCommand();
 
         return $this->forward(
-            'JMoseCommandSchedulerBundle:Detail:index',
+            self::class.'::indexAction',
             [
                 'scheduledCommand' => $scheduledCommand,
             ]
@@ -57,9 +57,10 @@ class DetailController extends BaseController
     }
 
     /**
-     * Get a ScheduledCommand object with its id and forward it to the index action (view)
+     * Get a ScheduledCommand object with its id and forward it to the index action (view).
      *
      * @param $scheduledCommandId
+     *
      * @return Response
      */
     public function initEditScheduledCommandAction($scheduledCommandId)
@@ -68,7 +69,7 @@ class DetailController extends BaseController
             ->find($scheduledCommandId);
 
         return $this->forward(
-            'JMoseCommandSchedulerBundle:Detail:index',
+            self::class.'::indexAction',
             [
                 'scheduledCommand' => $scheduledCommand,
             ]
@@ -76,9 +77,10 @@ class DetailController extends BaseController
     }
 
     /**
-     * Handle save after form is submit and forward to the index action (view)
+     * Handle save after form is submit and forward to the index action (view).
      *
      * @param Request $request
+     *
      * @return Response
      */
     public function saveAction(Request $request)
@@ -87,7 +89,7 @@ class DetailController extends BaseController
 
         // Init and populate form object
         $commandDetail = $request->request->get('command_scheduler_detail');
-        if ($commandDetail['id'] != '') {
+        if ('' != $commandDetail['id']) {
             $scheduledCommand = $entityManager->getRepository(ScheduledCommand::class)
                 ->find($commandDetail['id']);
         } else {
@@ -98,7 +100,6 @@ class DetailController extends BaseController
         $scheduledCommandForm->handleRequest($request);
 
         if ($scheduledCommandForm->isSubmitted() && $scheduledCommandForm->isValid()) {
-
             // Handle save to the database
             if (null === $scheduledCommand->getId()) {
                 $entityManager->persist($scheduledCommand);
@@ -110,12 +111,11 @@ class DetailController extends BaseController
                 ->add('success', $this->translator->trans('flash.success', [], 'JMoseCommandScheduler'));
 
             return $this->redirect($this->generateUrl('jmose_command_scheduler_list'));
-
         }
 
         // Redirect to indexAction with the form object that has validation errors
         return $this->forward(
-            'JMoseCommandSchedulerBundle:Detail:index',
+            self::class.'::indexAction',
             [
                 'scheduledCommand' => $scheduledCommand,
                 'scheduledCommandForm' => $scheduledCommandForm,

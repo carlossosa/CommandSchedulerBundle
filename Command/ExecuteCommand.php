@@ -10,7 +10,6 @@ use Doctrine\DBAL\ConnectionException;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\ORMException;
-use JMose\CommandSchedulerBundle\Service\SchedulerService;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Input\InputInterface;
@@ -55,6 +54,9 @@ class ExecuteCommand extends Command
      */
     private $commandsVerbosity;
 
+    /**
+     * @var string
+     */
     private $managerName;
 
     /**
@@ -110,6 +112,7 @@ class ExecuteCommand extends Command
         $manager = $this->registry->getManager(
             $this->managerName
         );
+
         $this->em = $manager->create(
             $manager->getConnection(),
             $manager->getConfiguration()
@@ -138,7 +141,7 @@ class ExecuteCommand extends Command
                 ' not found or not writable. You should override `log_path` in your config.yml' . '</error>'
             );
 
-            return;
+            return 1;
         }
 
         $commands = $this->em->getRepository(ScheduledCommand::class)->findEnabledCommand();
@@ -146,12 +149,12 @@ class ExecuteCommand extends Command
         $noneExecution = true;
         foreach ($commands as $command) {
 
-            $this->em->refresh($this->em->merge($command));
+            $this->em->refresh($this->em->find(ScheduledCommand::class, $command));
             if ($command->isDisabled() || $command->isLocked()) {
                 continue;
             }
 
-            if ($command->getExecutionMode() == ScheduledCommand::MODE_AUTO) {
+            if ($command->getExecutionMode() === ScheduledCommand::MODE_AUTO) {
                 /** @var ScheduledCommand $command */
                 $cron = CronExpression::factory($command->getCronExpression());
                 $nextRunDate = $cron->getNextRunDate($command->getLastExecution(), 0, false, null, false);
@@ -191,13 +194,15 @@ class ExecuteCommand extends Command
                 $command->setExecutionMode(ScheduledCommand::MODE_ONDEMAND);
 
                 $this->em->persist($command);
-                $this->em->flush($command);
+                $this->em->flush();
             }
         }
 
         if (true === $noneExecution) {
             $output->writeln('Nothing to do.');
         }
+
+        return 0;
     }
 
     /**
@@ -226,7 +231,7 @@ class ExecuteCommand extends Command
             $scheduledCommand = $notLockedCommand;
             $scheduledCommand->setLastExecution(new \DateTime());
             $scheduledCommand->setLocked(true);
-            $scheduledCommand = $this->em->merge($scheduledCommand);
+            $this->em->persist($scheduledCommand);
             $this->em->flush();
             $this->em->getConnection()->commit();
         } catch (\Exception $e) {
@@ -241,6 +246,9 @@ class ExecuteCommand extends Command
 
             return;
         }
+
+        $scheduledCommand = $this->em->find(ScheduledCommand::class, $scheduledCommand);
+
         try {
             $command = $this->getApplication()->find($scheduledCommand->getCommand());
         } catch (\InvalidArgumentException $e) {
@@ -292,10 +300,10 @@ class ExecuteCommand extends Command
             $this->em = $this->em->create($this->em->getConnection(), $this->em->getConfiguration());
         }
 
-        $scheduledCommand = $this->em->merge($scheduledCommand);
         $scheduledCommand->setLastReturnCode($result);
         $scheduledCommand->setLocked(false);
         $scheduledCommand->setExecuteImmediately(false);
+        $this->em->persist($scheduledCommand);
         $this->em->flush();
 
         /*

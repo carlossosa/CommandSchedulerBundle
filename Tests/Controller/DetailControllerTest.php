@@ -2,97 +2,108 @@
 
 namespace JMose\CommandSchedulerBundle\Tests\Controller;
 
+use JMose\CommandSchedulerBundle\Fixtures\ORM\LoadScheduledCommandData;
 use Liip\FunctionalTestBundle\Test\WebTestCase;
+use Liip\TestFixturesBundle\Test\FixturesTrait;
 
 /**
- * Class DetailControllerTest
- * @package JMose\CommandSchedulerBundle\Tests\Controller
+ * Class DetailControllerTest.
  */
 class DetailControllerTest extends WebTestCase
 {
+    use FixturesTrait;
 
     /**
      * Test "Create a new command" button.
      */
     public function testInitNewScheduledCommand()
     {
-        $this->loadFixtures(array());
-
         $client = parent::createClient();
+        $this->loadFixtures([]);
+
         $crawler = $client->request('GET', '/command-scheduler/detail/new');
         $this->assertEquals(1, $crawler->filter('button[id="command_scheduler_detail_save"]')->count());
     }
 
     /**
-     * Test "Edit a command" action
+     * Test "Edit a command" action.
      */
     public function testInitEditScheduledCommand()
     {
-        //DataFixtures create 4 records
-        $this->loadFixtures(array(
-            'JMose\CommandSchedulerBundle\Fixtures\ORM\LoadScheduledCommandData'
-        ));
-
         $client = parent::createClient();
+        // DataFixtures create 4 records
+        $this->loadFixtures([LoadScheduledCommandData::class]);
+
         $crawler = $client->request('GET', '/command-scheduler/detail/edit/1');
         $this->assertEquals(1, $crawler->filter('button[id="command_scheduler_detail_save"]')->count());
 
         $buttonCrawlerNode = $crawler->selectButton('Save');
         $form = $buttonCrawlerNode->form();
-        $fixtureSet = array(
-            'command_scheduler_detail[id]' => "1",
-            'command_scheduler_detail[name]' => "one",
-            'command_scheduler_detail[executionMode]' => "auto",
-            'command_scheduler_detail[command]' => "debug:container",
-            'command_scheduler_detail[arguments]' => "--help",
-            'command_scheduler_detail[cronExpression]' => "@daily",
-            'command_scheduler_detail[logFile]' => "one.log",
-            'command_scheduler_detail[priority]' => "100"
-        );
+        $fixtureSet = [
+            'command_scheduler_detail[id]' => '1',
+            'command_scheduler_detail[name]' => 'one',
+            'command_scheduler_detail[executionMode]' => 'auto',
+            'command_scheduler_detail[command]' => 'debug:container',
+            'command_scheduler_detail[arguments]' => '--help',
+            'command_scheduler_detail[cronExpression]' => '@daily',
+            'command_scheduler_detail[logFile]' => 'one.log',
+            'command_scheduler_detail[priority]' => '100',
+            'command_scheduler_detail[save]' => '',
+            'command_scheduler_detail[delayExecution][date][month]' => '',
+            'command_scheduler_detail[delayExecution][date][day]' => '',
+            'command_scheduler_detail[delayExecution][date][year]' => '',
+            'command_scheduler_detail[delayExecution][time][hour]' => '',
+            'command_scheduler_detail[delayExecution][time][minute]' => '',
+            'command_scheduler_detail[runUntil][date][month]' => '',
+            'command_scheduler_detail[runUntil][date][day]' => '',
+            'command_scheduler_detail[runUntil][date][year]' => '',
+            'command_scheduler_detail[runUntil][time][hour]' => '',
+            'command_scheduler_detail[runUntil][time][minute]' => '',
 
-        $this->assertArraySubset($fixtureSet, $form->getValues());
+        ];
+
+        $this->assertEquals($fixtureSet, $form->getValues());
     }
 
     /**
-     * Test new scheduling creation
+     * Test new scheduling creation.
      */
     public function testNewSave()
     {
-        $this->loadFixtures(array());
-
         $client = parent::createClient();
+
+        $this->loadFixtures([]);
+
         $client->followRedirects(true);
         $crawler = $client->request('GET', '/command-scheduler/detail/new');
         $buttonCrawlerNode = $crawler->selectButton('Save');
         $form = $buttonCrawlerNode->form();
 
-        $form->setValues(array(
-            'command_scheduler_detail[name]' => "wtc",
-            'command_scheduler_detail[executionMode]' => "auto",
-            'command_scheduler_detail[command]' => "translation:update",
-            'command_scheduler_detail[arguments]' => "--help",
-            'command_scheduler_detail[cronExpression]' => "@daily",
-            'command_scheduler_detail[logFile]' => "wtc.log",
-            'command_scheduler_detail[priority]' => "5",
-            'command_scheduler_detail[executionMode]' => "auto",
-        ));
+        $form->setValues([
+            'command_scheduler_detail[name]' => 'wtc',
+            'command_scheduler_detail[command]' => 'translation:update',
+            'command_scheduler_detail[arguments]' => '--help',
+            'command_scheduler_detail[cronExpression]' => '@daily',
+            'command_scheduler_detail[logFile]' => 'wtc.log',
+            'command_scheduler_detail[priority]' => '5',
+            'command_scheduler_detail[executionMode]' => 'auto',
+        ]);
         $crawler = $client->submit($form);
 
         $this->assertEquals(1, $crawler->filter('a[href^="/command-scheduler/action/toggle/"]')->count());
-        $this->assertEquals("wtc", trim($crawler->filter('td')->eq(1)->text()));
+        $this->assertEquals('wtc', trim($crawler->filter('td')->eq(1)->text()));
     }
 
     /**
-     * Test "Edit and save a scheduling"
+     * Test "Edit and save a scheduling".
      */
     public function testEditSave()
     {
-        //DataFixtures create 4 records
-        $this->loadFixtures(array(
-            'JMose\CommandSchedulerBundle\Fixtures\ORM\LoadScheduledCommandData'
-        ));
-
         $client = parent::createClient();
+
+        // DataFixtures create 4 records
+        $this->loadFixtures([LoadScheduledCommandData::class]);
+
         $client->followRedirects(true);
         $crawler = $client->request('GET', '/command-scheduler/detail/edit/1');
         $buttonCrawlerNode = $crawler->selectButton('Save');
@@ -102,7 +113,6 @@ class DetailControllerTest extends WebTestCase
         $crawler = $client->submit($form);
 
         $this->assertEquals(5, $crawler->filter('a[href^="/command-scheduler/action/toggle/"]')->count());
-        $this->assertEquals("edited one", trim($crawler->filter('td')->eq(1)->text()));
+        $this->assertEquals('edited one', trim($crawler->filter('td')->eq(1)->text()));
     }
-
 }

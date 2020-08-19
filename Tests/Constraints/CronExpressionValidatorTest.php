@@ -22,19 +22,19 @@ class CronExpressionValidatorTest extends ConstraintValidatorTestCase
      */
     public function testValidValues($value)
     {
-        $this->validator->validate($value, new CronExpression());
+        $this->validator->validate($value, new CronExpression(['message' => '']));
 
         $this->assertNoViolation();
     }
 
     public function getValidValues()
     {
-        return array(
-            array('* * * * * *'),
-            array('@daily'),
-            array('@yearly'),
-            array('*/10 * * * *'),
-        );
+        return [
+            ['* * * * *'],
+            ['@daily'],
+            ['@yearly'],
+            ['*/10 * * * *'],
+        ];
     }
 
     /**
@@ -43,9 +43,9 @@ class CronExpressionValidatorTest extends ConstraintValidatorTestCase
     public function testInvalidValues($value)
     {
         $constraint = new CronExpression(
-            array(
+            [
                 'message' => 'myMessage',
-            )
+            ]
         );
 
         $this->validator->validate($value, $constraint);
@@ -56,11 +56,13 @@ class CronExpressionValidatorTest extends ConstraintValidatorTestCase
 
     public function getInvalidValues()
     {
-        return array(
-            array('*/10 * * *'),
-            array('*/5 * * * ?'),
-            array('sometimes'),
-            array('never'),
-        );
+        return [
+            ['*/10 * * *'],
+            ['*/5 * * * ?'],
+            ['sometimes'],
+            ['never'],
+            ['*****'],
+            ['* * * * * * *'],
+        ];
     }
 }

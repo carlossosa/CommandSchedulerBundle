@@ -20,6 +20,8 @@ class StartSchedulerCommand extends Command
 {
     const PID_FILE = '.cron-pid';
 
+    protected $seconds;
+
     /**
      * {@inheritdoc}
      */
@@ -27,6 +29,7 @@ class StartSchedulerCommand extends Command
     {
         $this->setName('scheduler:start')
             ->setDescription('Starts command scheduler')
+            ->addOption('seconds', 's', InputOption:: VALUE_OPTIONAL, 'Seconds between executions.', 60)
             ->addOption('blocking', 'b', InputOption::VALUE_NONE, 'Run in blocking mode.');
     }
 
@@ -35,6 +38,8 @@ class StartSchedulerCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+         $this->seconds = (int) $input->getOption('seconds');
+
         if ($input->getOption('blocking')) {
             $output->writeln(sprintf('<info>%s</info>', 'Starting command scheduler in blocking mode.'));
             $this->scheduler($output->isVerbose() ? $output : new NullOutput(), null);
@@ -78,7 +83,7 @@ class StartSchedulerCommand extends Command
 
         while (true) {
             $now = microtime(true);
-            usleep((60 - ($now % 60) + (int) $now - $now) * 1e6);
+            usleep(($this->seconds - ($now % $this->seconds) + (int) $now - $now) * 1e6);
 
             if (null !== $pidFile && !file_exists($pidFile)) {
                 break;

@@ -19,7 +19,7 @@
         "php": ">=7.1",
         "symfony/console": "^4.4",
         "doctrine/orm": "^2.7",
-        "doctrine/doctrine-bundle": "^1.12",
+        "doctrine/doctrine-bundle": "^2.1",
         "carlossosa88/cron-expression": "v2.3.0-p2",
         "symfony/framework-bundle": "^4.4",
         "symfony/twig-bundle": "^4.4",

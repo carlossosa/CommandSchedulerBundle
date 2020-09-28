@@ -32,6 +32,15 @@ services:
         public: true
         arguments:
             - "@doctrine"
+            - "%jmose_command_scheduler.doctrine_manager%"
+            - "@cache.app"
+            -
+    JMose\CommandSchedulerBundle\Service\CommandManager:
+        public: true
+        arguments:
+            - "@doctrine"
+            - "@cache.app"
+            - "%jmose_command_scheduler.doctrine_manager%"
 
     JMose\CommandSchedulerBundle\Command\ExecuteCommand:
         arguments:

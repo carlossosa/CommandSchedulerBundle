@@ -49,7 +49,7 @@ class DetailController extends BaseController
         $scheduledCommand = new ScheduledCommand();
 
         return $this->forward(
-            self::class.'::indexAction',
+            self::class . '::indexAction',
             [
                 'scheduledCommand' => $scheduledCommand,
             ]
@@ -69,7 +69,7 @@ class DetailController extends BaseController
             ->find($scheduledCommandId);
 
         return $this->forward(
-            self::class.'::indexAction',
+            self::class . '::indexAction',
             [
                 'scheduledCommand' => $scheduledCommand,
             ]
@@ -101,9 +101,8 @@ class DetailController extends BaseController
 
         if ($scheduledCommandForm->isSubmitted() && $scheduledCommandForm->isValid()) {
             // Handle save to the database
-            if (null === $scheduledCommand->getId()) {
-                $entityManager->persist($scheduledCommand);
-            }
+
+            $entityManager->persist($scheduledCommand);
             $entityManager->flush();
 
             // Add a flash message and do a redirect to the list
@@ -115,7 +114,7 @@ class DetailController extends BaseController
 
         // Redirect to indexAction with the form object that has validation errors
         return $this->forward(
-            self::class.'::indexAction',
+            self::class . '::indexAction',
             [
                 'scheduledCommand' => $scheduledCommand,
                 'scheduledCommandForm' => $scheduledCommandForm,

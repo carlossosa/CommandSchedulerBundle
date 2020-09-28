@@ -2,12 +2,14 @@
 
 namespace JMose\CommandSchedulerBundle\Service;
 
+use Composer\Cache;
 use DateTimeInterface;
 use Doctrine\Bundle\DoctrineBundle\Registry;
 use ErrorException;
 use JMose\CommandSchedulerBundle\Entity\ScheduledCommand;
 use Cron\CronExpression as CronExpressionLib;
 use JMose\CommandSchedulerBundle\Exception\CommandNotFoundException;
+use Symfony\Contracts\Cache\CacheInterface;
 
 /**
  * Provider simplified access to Schedule Commands (ON-Demand)
@@ -17,7 +19,7 @@ use JMose\CommandSchedulerBundle\Exception\CommandNotFoundException;
 class SchedulerService
 {
     /** @var Registry */
-    private $doctrine;
+    private Registry $doctrine;
 
     /** @var string */
     private $commandName;
@@ -25,12 +27,17 @@ class SchedulerService
     /** @var ScheduledCommand */
     private $command;
 
+    private CacheInterface $cache;
+
     /**
      * @param Registry $doctrine
+     * @param string $managerName
+     * @param CacheInterface $cache
      */
-    public function __construct(Registry $doctrine)
+    public function __construct(Registry $doctrine, string $managerName, CacheInterface $cache)
     {
         $this->doctrine = $doctrine;
+        $this->cache = $cache;
     }
 
     /**

@@ -73,6 +73,7 @@ class ListController extends BaseController
         $entityManager = $this->getDoctrineManager();
         $scheduledCommand = $entityManager->getRepository(ScheduledCommand::class)->find($id);
         $scheduledCommand->setDisabled(!$scheduledCommand->isDisabled());
+        $entityManager->persist($scheduledCommand);
         $entityManager->flush();
 
         return $this->redirect($this->generateUrl('jmose_command_scheduler_list'));
@@ -89,6 +90,7 @@ class ListController extends BaseController
         $entityManager = $this->getDoctrineManager();
         $scheduledCommand = $entityManager->getRepository(ScheduledCommand::class)->find($id);
         $scheduledCommand->setExecuteImmediately(true);
+        $entityManager->persist($scheduledCommand);
         $entityManager->flush();
 
         // Add a flash message and do a redirect to the list
@@ -113,6 +115,7 @@ class ListController extends BaseController
         $entityManager = $this->getDoctrineManager();
         $scheduledCommand = $entityManager->getRepository(ScheduledCommand::class)->find($id);
         $scheduledCommand->setLocked(false);
+        $entityManager->persist($scheduledCommand);
         $entityManager->flush();
 
         // Add a flash message and do a redirect to the list

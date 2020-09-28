@@ -33,35 +33,45 @@ class CommandManager
 
     /**
      * @param $command
+     * @param null $name
      * @return object|null
      * @throws InvalidArgumentException
      */
-    public function getCommand( $command):?ScheduledCommand {
+    public function getCommand( $command, $name = null):?ScheduledCommand {
         /** borrowed code from Command.php component */
         if ( $command instanceof Command || (is_string($command) && class_exists($command))) {
-            $name = $command::getDefaultName();
+            $commandName = $command::getDefaultName();
         } elseif (is_string($command) && preg_match('/^[^\:]++(\:[^\:]++)*$/', $command)) {
-            $name = $command;
+            $commandName = $command;
         } else {
             throw new \InvalidArgumentException(sprintf('%s is not a valid command object or command name.', is_object($command) ? get_class($command) : $command));
         }
 
         try {
-            $commandId = $this->cache->get('jms_command_scheduler_cmd_id_' . str_replace(':', '_', $name), function (ItemInterface $item) use ($name) {
-                $commandEntity = $this->manager->getRepository(ScheduledCommand::class)->findBy([
-                    'command' => $name
-                ], [
+            $commandId = $this->cache->get(
+                sprintf( 'jms_command_scheduler_cmd_id_%s_%s',
+                    str_replace(':', '_', $commandName),
+                    str_replace(':', '_', $name ?? $commandName)
+                )
+                , function (ItemInterface $item) use ($commandName,$name) {
+                $commandEntity = $this->manager->getRepository(ScheduledCommand::class)->findBy(array_merge([
+                    'command' => $commandName
+                ], $name ? [
+                    'name' => $name
+                ] : []), [
                     'priority' => 'ASC'
                 ]);
+
 
                 if (count($commandEntity) < 1) {
                     throw new CommandNotFoundException('Command not found.');
                 }
 
                 $item->expiresAfter(3600);
+
                 return $commandEntity[0]->getId();
             });
-        } catch (\ErrorException $exception) {
+        } catch (CommandNotFoundException $exception) {
             return null;
         }
 

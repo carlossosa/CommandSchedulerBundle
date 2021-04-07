@@ -2,6 +2,7 @@
 
 namespace JMose\CommandSchedulerBundle\Tests\Controller;
 
+use Doctrine\Persistence\ManagerRegistry;
 use JMose\CommandSchedulerBundle\Fixtures\ORM\LoadScheduledCommandData;
 use Liip\FunctionalTestBundle\Test\WebTestCase;
 use Liip\TestFixturesBundle\Test\FixturesTrait;

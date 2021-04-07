@@ -34,13 +34,12 @@ services:
             - "@doctrine"
             - "%jmose_command_scheduler.doctrine_manager%"
             - "@cache.app"
-            -
     JMose\CommandSchedulerBundle\Service\CommandManager:
         public: true
+        autowire: true
         arguments:
-            - "@doctrine"
-            - "@cache.app"
             - "%jmose_command_scheduler.doctrine_manager%"
+        tags: [ container.service_subscriber ]
 
     JMose\CommandSchedulerBundle\Command\ExecuteCommand:
         arguments:

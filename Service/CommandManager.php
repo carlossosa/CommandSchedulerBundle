@@ -6,40 +6,75 @@ namespace JMose\CommandSchedulerBundle\Service;
 
 use Cron\CronExpression as CronExpressionLib;
 use DateTimeInterface;
-use Doctrine\Bundle\DoctrineBundle\Registry;
-use Doctrine\Persistence\ObjectManager;
+use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\OptimisticLockException;
+use Doctrine\ORM\ORMException;
+use Doctrine\ORM\TransactionRequiredException;
+use Doctrine\Persistence\ManagerRegistry;
 use JMose\CommandSchedulerBundle\Entity\ScheduledCommand;
 use JMose\CommandSchedulerBundle\Exception\CommandNotFoundException;
-use Psr\Cache\InvalidArgumentException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Contracts\Service\ServiceSubscriberInterface;
+use Symfony\Contracts\Service\ServiceSubscriberTrait;
 
-class CommandManager
+class CommandManager implements ServiceSubscriberInterface
 {
-    private ObjectManager $manager;
-    private CacheInterface $cache;
+    use ServiceSubscriberTrait;
+
+    public static function getSubscribedServices(): array
+    {
+        return [
+            //Registry::class,
+            ManagerRegistry::class => ManagerRegistry::class,
+            CacheInterface::class => '?' . CacheInterface::class
+        ];
+    }
+
+    protected ?string $managerName;
+    protected EntityManager $entityManager;
 
     /**
-     * @param Registry $registry
-     * @param string $managerName
-     * @param CacheInterface $cache
+     * @param string|null $managerName
      */
-    public function __construct(Registry $registry, CacheInterface $cache, string $managerName = null)
+    public function __construct(string $managerName = null)
     {
-        $this->manager = $registry->getManager($managerName);
-        $this->cache = $cache;
+        $this->managerName = $managerName;
     }
+
+    /**
+     * Get a empty manager
+     *
+     * @return EntityManager
+     * @throws ORMException
+     */
+    protected function getEntityManager(): EntityManager
+    {
+        if (!isset($this->entityManager) || !$this->entityManager || ($this->entityManager && !$this->entityManager->isOpen())) {
+            if (isset($this->entityManager)) {
+                unset($this->entityManager);
+            }
+            $this->entityManager = EntityManager::create(
+                $this->container->get(ManagerRegistry::class)->getManager($this->managerName)->getConnection(),
+                $this->container->get(ManagerRegistry::class)->getManager($this->managerName)->getConfiguration()
+            );
+        }
+
+        return $this->entityManager;
+    }
+
 
     /**
      * @param $command
      * @param null $name
      * @return object|null
-     * @throws InvalidArgumentException
+     * @throws ORMException
      */
-    public function getCommand( $command, $name = null):?ScheduledCommand {
+    public function getCommand($command, $name = null): ?ScheduledCommand
+    {
         /** borrowed code from Command.php component */
-        if ( $command instanceof Command || (is_string($command) && class_exists($command))) {
+        if ($command instanceof Command || (is_string($command) && class_exists($command))) {
             $commandName = $command::getDefaultName();
         } elseif (is_string($command) && preg_match('/^[^\:]++(\:[^\:]++)*$/', $command)) {
             $commandName = $command;
@@ -48,13 +83,13 @@ class CommandManager
         }
 
         try {
-            $commandId = $this->cache->get(
-                sprintf( 'jms_command_scheduler_cmd_id_%s_%s',
+            $commandId = $this->container->get(CacheInterface::class)->get(
+                sprintf('jms_command_scheduler_cmd_id_%s_%s',
                     str_replace(':', '_', $commandName),
                     str_replace(':', '_', $name ?? $commandName)
                 )
-                , function (ItemInterface $item) use ($commandName,$name) {
-                $commandEntity = $this->manager->getRepository(ScheduledCommand::class)->findBy(array_merge([
+                , function (ItemInterface $item) use ($commandName, $name) {
+                $commandEntity = $this->getEntityManager()->getRepository(ScheduledCommand::class)->findBy(array_merge([
                     'command' => $commandName
                 ], $name ? [
                     'name' => $name
@@ -75,21 +110,26 @@ class CommandManager
             return null;
         }
 
-        return $this->manager->find(ScheduledCommand::class, $commandId);
+        return $this->getEntityManager()->find(ScheduledCommand::class, $commandId);
     }
 
     /**
      * Schedule to Run in next cycle
      *
      * @param ScheduledCommand $command
+     * @throws ORMException
+     * @throws OptimisticLockException
+     * @throws TransactionRequiredException
      */
-    public function run(ScheduledCommand $command)
+    public function run(ScheduledCommand $command): void
     {
+        $command = $this->getEntityManager()->find(ScheduledCommand::class, $command->getId());
+
         $command->setExecuteImmediately(true)
             ->setDelayExecution(null);
 
-        $this->manager->persist($command);
-        $this->manager->flush();
+        $this->getEntityManager()->persist($command);
+        $this->getEntityManager()->flush();
     }
 
     /**
@@ -97,13 +137,18 @@ class CommandManager
      *
      * @param ScheduledCommand $command
      * @return void
+     * @throws ORMException
+     * @throws OptimisticLockException
+     * @throws TransactionRequiredException
      */
     public function stop(ScheduledCommand $command): void
     {
+        $command = $this->getEntityManager()->find(ScheduledCommand::class, $command->getId());
+
         $command->setExecuteImmediately(false);
 
-        $this->manager->persist($command);
-        $this->manager->flush();
+        $this->getEntityManager()->persist($command);
+        $this->getEntityManager()->flush();
     }
 
     /**
@@ -111,13 +156,18 @@ class CommandManager
      *
      * @param ScheduledCommand $command
      * @return void
+     * @throws ORMException
+     * @throws OptimisticLockException
+     * @throws TransactionRequiredException
      */
     public function disable(ScheduledCommand $command): void
     {
+        $command = $this->getEntityManager()->find(ScheduledCommand::class, $command->getId());
+
         $command->setDisabled(true);
 
-        $this->manager->persist($command);
-        $this->manager->flush();
+        $this->getEntityManager()->persist($command);
+        $this->getEntityManager()->flush();
     }
 
     /**
@@ -125,13 +175,16 @@ class CommandManager
      *
      * @param ScheduledCommand $command
      * @return void
-     * @throws InvalidArgumentException
+     * @throws ORMException
+     * @throws OptimisticLockException
+     * @throws TransactionRequiredException
      */
     public function enable(ScheduledCommand $command): void
     {
+        $command = $this->getEntityManager()->find(ScheduledCommand::class, $command->getId());
         $command->setDisabled(false);
-        $this->manager->persist($command);
-        $this->manager->flush();
+        $this->getEntityManager()->persist($command);
+        $this->getEntityManager()->flush();
     }
 
     /**
@@ -139,16 +192,20 @@ class CommandManager
      *
      * @param ScheduledCommand $command
      * @return void
+     * @throws ORMException
+     * @throws OptimisticLockException
+     * @throws TransactionRequiredException
      */
     public function setOnDemand(ScheduledCommand $command): void
     {
+        $command = $this->getEntityManager()->find(ScheduledCommand::class, $command->getId());
         $command
             ->setExecutionMode(ScheduledCommand::MODE_ONDEMAND)
             ->setRunUntil(null)
             ->setDelayExecution(null);
 
-        $this->manager->persist($command);
-        $this->manager->flush();
+        $this->getEntityManager()->persist($command);
+        $this->getEntityManager()->flush();
     }
 
     /**
@@ -157,9 +214,13 @@ class CommandManager
      * @param ScheduledCommand $command
      * @param null $newCronExpression
      * @return void
+     * @throws ORMException
+     * @throws OptimisticLockException
      */
     public function setAuto(ScheduledCommand $command, $newCronExpression = null): void
     {
+        $command = $this->getEntityManager()->find(ScheduledCommand::class, $command->getId());
+
         if ($newCronExpression) {
             $command->setCronExpression($newCronExpression);
         }
@@ -170,35 +231,42 @@ class CommandManager
             throw new \InvalidArgumentException('Invalid Cron Expression.');
         }
 
-        $this->manager->persist($command);
-        $this->manager->flush();
+        $this->getEntityManager()->persist($command);
+        $this->getEntityManager()->flush();
     }
 
     /**
      * @param ScheduledCommand $command
      * @param DateTimeInterface $delayUntil
      * @return void
+     * @throws ORMException
+     * @throws OptimisticLockException
      */
     public function runAfter(ScheduledCommand $command, DateTimeInterface $delayUntil): void
     {
+        $command = $this->getEntityManager()->find(ScheduledCommand::class, $command->getId());
         $command->setDelayExecution($delayUntil)
             ->setExecutionMode(ScheduledCommand::MODE_AUTO);
 
-        $this->manager->persist($command);
-        $this->manager->flush();
+        $this->getEntityManager()->persist($command);
+        $this->getEntityManager()->flush();
     }
 
     /**
      * @param ScheduledCommand $command
      * @param DateTimeInterface $stopDate
      * @return void
+     * @throws ORMException
+     * @throws OptimisticLockException
+     * @throws TransactionRequiredException
      */
     public function runUntil(ScheduledCommand $command, DateTimeInterface $stopDate): void
     {
+        $command = $this->getEntityManager()->find(ScheduledCommand::class, $command->getId());
         $command->setRunUntil($stopDate);
 
-        $this->manager->persist($command);
-        $this->manager->flush();
+        $this->getEntityManager()->persist($command);
+        $this->getEntityManager()->flush();
     }
 
     /**
@@ -213,7 +281,7 @@ class CommandManager
      */
     public function isFailing(ScheduledCommand $command): bool
     {
-        return ($command->getLastReturnCode() == -1);
+        return ($command->getLastReturnCode() === -1);
     }
 
     /**
@@ -263,12 +331,12 @@ class CommandManager
     /**
      * True if it is an On-Demand command
      *
+     * @param ScheduledCommand $command
      * @return bool
-     * @throws ErrorException
      */
     public function isOnDemand(ScheduledCommand $command): bool
     {
-        return ($command->getExecutionMode() == ScheduledCommand::MODE_ONDEMAND);
+        return ($command->getExecutionMode() === ScheduledCommand::MODE_ONDEMAND);
     }
 
     /**
@@ -279,6 +347,6 @@ class CommandManager
      */
     public function isAuto(ScheduledCommand $command): bool
     {
-        return ($command->getExecutionMode() == ScheduledCommand::MODE_AUTO);
+        return ($command->getExecutionMode() === ScheduledCommand::MODE_AUTO);
     }
 }

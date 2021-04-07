@@ -15,6 +15,7 @@ use Symfony\Contracts\Cache\CacheInterface;
  * Provider simplified access to Schedule Commands (ON-Demand)
  *
  * @author Carlos Sosa
+ * @deprecated First try of a manager, replaced by CommandManager
  */
 class SchedulerService
 {

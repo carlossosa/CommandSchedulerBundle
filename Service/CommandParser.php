@@ -2,6 +2,7 @@
 
 namespace JMose\CommandSchedulerBundle\Service;
 
+use Exception;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\StreamOutput;
@@ -14,20 +15,9 @@ use Symfony\Component\HttpKernel\KernelInterface;
  */
 class CommandParser
 {
-    /**
-     * @var KernelInterface
-     */
-    private $kernel;
-
-    /**
-     * @var array
-     */
-    private $excludedNamespaces;
-
-    /**
-     * @var array
-     */
-    private $includedNamespaces;
+    protected KernelInterface $kernel;
+    protected array $excludedNamespaces;
+    protected array $includedNamespaces;
 
     /**
      * CommandParser constructor.
@@ -51,8 +41,9 @@ class CommandParser
      * Execute the console command "list" with XML output to have all available command.
      *
      * @return array
+     * @throws Exception
      */
-    public function getCommands()
+    public function getCommands(): array
     {
         $application = new Application($this->kernel);
         $application->setAutoExit(false);
@@ -78,7 +69,7 @@ class CommandParser
      *
      * @return array
      */
-    private function extractCommandsFromXML($xml)
+    private function extractCommandsFromXML($xml): array
     {
         if ('' == $xml) {
             return [];

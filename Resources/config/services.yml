@@ -26,14 +26,7 @@ services:
         autowire: true
         tags:
             - { name: form.type, alias: command_choice }
-
-    JMose\CommandSchedulerBundle\Service\SchedulerService:
-        shared: false
-        public: true
-        arguments:
-            - "@doctrine"
-            - "%jmose_command_scheduler.doctrine_manager%"
-            - "@cache.app"
+            -
     JMose\CommandSchedulerBundle\Service\CommandManager:
         public: true
         autowire: true
@@ -43,10 +36,8 @@ services:
 
     JMose\CommandSchedulerBundle\Command\ExecuteCommand:
         arguments:
-            - "@doctrine"
-            - "%jmose_command_scheduler.doctrine_manager%"
             - "%jmose_command_scheduler.log_path%"
-        tags: [console.command]
+        tags: [console.command, container.service_subscriber ]
 
     JMose\CommandSchedulerBundle\Command\MonitorCommand:
         arguments:

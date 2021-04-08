@@ -6,18 +6,23 @@ namespace JMose\CommandSchedulerBundle\Service;
 
 use Cron\CronExpression as CronExpressionLib;
 use DateTimeInterface;
+use Doctrine\DBAL\ConnectionException;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\ORMException;
 use Doctrine\ORM\TransactionRequiredException;
 use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Persistence\Mapping\MappingException;
+use Exception;
 use JMose\CommandSchedulerBundle\Entity\ScheduledCommand;
 use JMose\CommandSchedulerBundle\Exception\CommandNotFoundException;
+use RuntimeException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Service\ServiceSubscriberInterface;
 use Symfony\Contracts\Service\ServiceSubscriberTrait;
+use Throwable;
 
 class CommandManager implements ServiceSubscriberInterface
 {
@@ -69,10 +74,15 @@ class CommandManager implements ServiceSubscriberInterface
      * @param $command
      * @param null $name
      * @return object|null
+     * @throws MappingException
      * @throws ORMException
+     * @throws OptimisticLockException
+     * @throws TransactionRequiredException
      */
     public function getCommand($command, $name = null): ?ScheduledCommand
     {
+        $this->getEntityManager()->clear();
+
         /** borrowed code from Command.php component */
         if ($command instanceof Command || (is_string($command) && class_exists($command))) {
             $commandName = $command::getDefaultName();
@@ -114,12 +124,28 @@ class CommandManager implements ServiceSubscriberInterface
     }
 
     /**
+     * @param ScheduledCommand $scheduledCommand
+     * @return ScheduledCommand
+     * @throws ORMException
+     */
+    public function refreshScheduledCommand(ScheduledCommand $scheduledCommand):ScheduledCommand
+    {
+        if ( $this->getEntityManager()->contains($scheduledCommand)){
+            $this->getEntityManager()->refresh($scheduledCommand);
+            return $scheduledCommand;
+        }
+
+        return $this->getEntityManager()->find(ScheduledCommand::class, $scheduledCommand->getId());
+    }
+
+    /**
      * Schedule to Run in next cycle
      *
      * @param ScheduledCommand $command
      * @throws ORMException
      * @throws OptimisticLockException
      * @throws TransactionRequiredException
+     * @throws MappingException
      */
     public function run(ScheduledCommand $command): void
     {
@@ -130,6 +156,7 @@ class CommandManager implements ServiceSubscriberInterface
 
         $this->getEntityManager()->persist($command);
         $this->getEntityManager()->flush();
+        $this->getEntityManager()->clear();
     }
 
     /**
@@ -149,6 +176,7 @@ class CommandManager implements ServiceSubscriberInterface
 
         $this->getEntityManager()->persist($command);
         $this->getEntityManager()->flush();
+        $this->getEntityManager()->clear();
     }
 
     /**
@@ -168,6 +196,7 @@ class CommandManager implements ServiceSubscriberInterface
 
         $this->getEntityManager()->persist($command);
         $this->getEntityManager()->flush();
+        $this->getEntityManager()->clear();
     }
 
     /**
@@ -185,6 +214,7 @@ class CommandManager implements ServiceSubscriberInterface
         $command->setDisabled(false);
         $this->getEntityManager()->persist($command);
         $this->getEntityManager()->flush();
+        $this->getEntityManager()->clear();
     }
 
     /**
@@ -206,6 +236,7 @@ class CommandManager implements ServiceSubscriberInterface
 
         $this->getEntityManager()->persist($command);
         $this->getEntityManager()->flush();
+        $this->getEntityManager()->clear();
     }
 
     /**
@@ -233,6 +264,7 @@ class CommandManager implements ServiceSubscriberInterface
 
         $this->getEntityManager()->persist($command);
         $this->getEntityManager()->flush();
+        $this->getEntityManager()->clear();
     }
 
     /**
@@ -250,6 +282,7 @@ class CommandManager implements ServiceSubscriberInterface
 
         $this->getEntityManager()->persist($command);
         $this->getEntityManager()->flush();
+        $this->getEntityManager()->clear();
     }
 
     /**
@@ -267,6 +300,7 @@ class CommandManager implements ServiceSubscriberInterface
 
         $this->getEntityManager()->persist($command);
         $this->getEntityManager()->flush();
+        $this->getEntityManager()->clear();
     }
 
     /**
@@ -348,5 +382,68 @@ class CommandManager implements ServiceSubscriberInterface
     public function isAuto(ScheduledCommand $command): bool
     {
         return ($command->getExecutionMode() === ScheduledCommand::MODE_AUTO);
+    }
+
+    // Repository Shortcuts
+
+    /**
+     * @return ScheduledCommand[]
+     * @throws ORMException
+     */
+    public function getEnabledCommands(): array
+    {
+        return $this->getEntityManager()->getRepository(ScheduledCommand::class)->findEnabledCommand();
+    }
+
+    /**
+     * @param ScheduledCommand $scheduledCommand
+     * @return bool True for all good|False for Unable to lock command
+     * @throws ORMException
+     * @throws ConnectionException
+     * @throws Throwable
+     */
+    public function lockCommand(ScheduledCommand $scheduledCommand):bool
+    {
+        $this->getEntityManager()->getConnection()->beginTransaction();
+
+        try {
+            $notLockedCommand = $this
+                ->getEntityManager()
+                ->getRepository(ScheduledCommand::class)
+                ->getNotLockedCommand($scheduledCommand);
+            //$notLockedCommand will be locked for avoiding parallel calls: http://dev.mysql.com/doc/refman/5.7/en/innodb-locking-reads.html
+            if ($notLockedCommand === null) {
+                throw new RuntimeException();
+            }
+
+            $scheduledCommand = $notLockedCommand;
+            $scheduledCommand->setLastExecution(new \DateTime());
+            $scheduledCommand->setLocked(true);
+            $this->getEntityManager()->persist($scheduledCommand);
+            $this->getEntityManager()->flush();
+            $this->getEntityManager()->getConnection()->commit();
+        } catch (Throwable $e) {
+            $this->getEntityManager()->getConnection()->rollBack();
+
+            if ( $e->getMessage()) {
+                throw $e;
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
+    public function unlockCommand(ScheduledCommand $scheduledCommand, ?int $lastReturnCode = null)
+    {
+        $command = $this->getEntityManager()->find(ScheduledCommand::class, $scheduledCommand->getId());
+        $command->setLastReturnCode( $lastReturnCode)
+            ->setLocked(false)
+        ;
+
+        $this->getEntityManager()->persist($command);
+        $this->getEntityManager()->flush();
+        $this->getEntityManager()->clear();
     }
 }

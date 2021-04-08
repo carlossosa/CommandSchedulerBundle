@@ -281,10 +281,10 @@ class ScheduledCommand
     /**
      * Set lastReturnCode
      *
-     * @param integer $lastReturnCode
+     * @param int|null $lastReturnCode
      * @return ScheduledCommand
      */
-    public function setLastReturnCode($lastReturnCode)
+    public function setLastReturnCode(?int $lastReturnCode)
     {
         $this->lastReturnCode = $lastReturnCode;
 

@@ -4,6 +4,8 @@ namespace JMose\CommandSchedulerBundle\Entity\Repository;
 
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\TransactionRequiredException;
 use JMose\CommandSchedulerBundle\Entity\ScheduledCommand;
 
 /**
@@ -60,16 +62,16 @@ class ScheduledCommandRepository extends EntityRepository
     }
 
     /**
-     * @param integer|bool $lockTimeout
-     * @return array|\JMose\CommandSchedulerBundle\Entity\ScheduledCommand[]
+     * @param integer|null $lockTimeout
+     * @return ScheduledCommand[]
      */
-    public function findFailedAndTimeoutCommands($lockTimeout = false)
+    public function findFailedAndTimeoutCommands(?int $lockTimeout = null)
     {
         // Fist, get all failed commands (return != 0)
         $failedCommands = $this->findFailedCommand();
 
         // Then, si a timeout value is set, get locked commands and check timeout
-        if (false !== $lockTimeout) {
+        if (null !== $lockTimeout) {
             $lockedCommands = $this->findLockedCommand();
             foreach ($lockedCommands as $lockedCommand) {
                 $now = time();
@@ -85,8 +87,8 @@ class ScheduledCommandRepository extends EntityRepository
     /**
      * @param ScheduledCommand $command
      * @return mixed
-     * @throws \Doctrine\ORM\NonUniqueResultException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws NonUniqueResultException
+     * @throws TransactionRequiredException
      */
     public function getNotLockedCommand(ScheduledCommand $command)
     {

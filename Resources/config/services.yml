@@ -26,7 +26,7 @@ services:
         autowire: true
         tags:
             - { name: form.type, alias: command_choice }
-            -
+
     JMose\CommandSchedulerBundle\Service\CommandManager:
         public: true
         autowire: true
@@ -37,9 +37,7 @@ services:
     JMose\CommandSchedulerBundle\Command\ExecuteCommand:
         arguments:
             - "%jmose_command_scheduler.log_path%"
-        tags:
-            - { name: console.command }
-            - { name: container.service_subscriber }
+        tags: [console.command, container.service_subscriber ]
 
     JMose\CommandSchedulerBundle\Command\MonitorCommand:
         arguments:

@@ -269,6 +269,7 @@ class ExecuteCommand extends Command implements ServiceSubscriberInterface
             $result = -1;
         }
 
+        $this->container->get(CommandManager::class)->unlockCommand($scheduledCommand, $result);
         /*
          * This clear() is necessary to avoid conflict between commands and to be sure that none entity are managed
          * before entering in a new command

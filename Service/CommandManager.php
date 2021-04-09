@@ -435,11 +435,20 @@ class CommandManager implements ServiceSubscriberInterface
         return true;
     }
 
-    public function unlockCommand(ScheduledCommand $scheduledCommand, ?int $lastReturnCode = null)
+    /**
+     * @param ScheduledCommand $scheduledCommand
+     * @param int|null $lastReturnCode
+     * @throws MappingException
+     * @throws ORMException
+     * @throws OptimisticLockException
+     * @throws TransactionRequiredException
+     */
+    public function unlockCommand(ScheduledCommand $scheduledCommand, ?int $lastReturnCode = null): void
     {
         $command = $this->getEntityManager()->find(ScheduledCommand::class, $scheduledCommand->getId());
         $command->setLastReturnCode( $lastReturnCode)
             ->setLocked(false)
+            ->setExecuteImmediately(false)
         ;
 
         $this->getEntityManager()->persist($command);

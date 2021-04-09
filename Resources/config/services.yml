@@ -36,6 +36,7 @@ services:
 
     JMose\CommandSchedulerBundle\Command\ExecuteCommand:
         autowire: true
+        autoconfigure: true
         arguments:
             - "%jmose_command_scheduler.log_path%"
         tags: [console.command, container.service_subscriber ]
